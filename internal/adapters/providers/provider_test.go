@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -116,6 +117,19 @@ func TestClaudeProviderBuildsRestrictedStreamJSONArgsAndExtractsStructuredOutput
 	}
 }
 
+func TestClaudeProviderAttachesDefaultSchema(t *testing.T) {
+	t.Parallel()
+
+	runner := &fakeRunner{result: execution.Result{Stdout: `{"type":"result","structured_output":{"verdict":"pass"}}` + "\n"}}
+	_, err := (ClaudeProvider{Runner: runner, SessionID: "00000000-0000-4000-8000-000000000000"}).Invoke(context.Background(), review.Request{TaskID: "task"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsArg(runner.req.Args, "--json-schema") {
+		t.Fatalf("args missing --json-schema: %+v", runner.req.Args)
+	}
+}
+
 func TestCodexProviderBuildsReadOnlyEphemeralArgsAndReadsOutputFile(t *testing.T) {
 	t.Parallel()
 
@@ -153,6 +167,45 @@ func TestCodexProviderBuildsReadOnlyEphemeralArgsAndReadsOutputFile(t *testing.T
 	if !reflect.DeepEqual(runner.req.Args, wantArgs) || runner.req.Input != "prompt" {
 		t.Fatalf("request = %+v", runner.req)
 	}
+}
+
+func TestCodexProviderWritesDefaultSchema(t *testing.T) {
+	t.Parallel()
+
+	var schemaPath string
+	outputPath := t.TempDir() + "/packet.json"
+	runner := &fakeRunner{
+		result: execution.Result{Stdout: ""},
+		onRun: func(req execution.Request) {
+			for i, arg := range req.Args {
+				if arg == "--output-schema" && i+1 < len(req.Args) {
+					schemaPath = req.Args[i+1]
+				}
+			}
+			if schemaPath == "" {
+				t.Fatal("missing output schema")
+			}
+			if data, err := os.ReadFile(schemaPath); err != nil || !strings.Contains(string(data), `"verdict"`) {
+				t.Fatalf("schema data = %q err=%v", data, err)
+			}
+			if err := os.WriteFile(outputPath, []byte(`{"verdict":"pass"}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+	_, err := (CodexProvider{OutputPath: outputPath, Runner: runner}).Invoke(context.Background(), review.Request{TaskID: "task"})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func containsArg(args []string, want string) bool {
+	for _, arg := range args {
+		if arg == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestClaudeEventName(t *testing.T) {

@@ -104,8 +104,12 @@ func (p ClaudeProvider) Invoke(ctx context.Context, req review.Request) (review.
 	if sessionID == "" {
 		sessionID = newUUID()
 	}
+	schemaJSON := p.SchemaJSON
+	if schemaJSON == "" {
+		schemaJSON = ReviewPacketSchemaJSON()
+	}
 	result, err := p.Runner.Run(ctx, execution.Request{
-		Args:                 ClaudeArgs(binaryOrDefault(p.Binary, "claude"), p.Model, sessionID, p.SchemaJSON),
+		Args:                 ClaudeArgs(binaryOrDefault(p.Binary, "claude"), p.Model, sessionID, schemaJSON),
 		Input:                req.Prompt,
 		CWD:                  p.CWD,
 		Env:                  p.Env,
@@ -153,8 +157,24 @@ func (p CodexProvider) Invoke(ctx context.Context, req review.Request) (review.P
 		cleanup = func() { _ = os.Remove(outputPath) }
 	}
 	defer cleanup()
+	schemaPath := p.SchemaPath
+	cleanupSchema := func() {}
+	if schemaPath == "" {
+		file, err := os.CreateTemp("", "scafld-review-schema-*.json")
+		if err != nil {
+			return review.Packet{}, fmt.Errorf("%w: create schema file: %v", ErrProviderFailed, err)
+		}
+		schemaPath = file.Name()
+		if _, err := file.WriteString(ReviewPacketSchemaJSON()); err != nil {
+			_ = file.Close()
+			return review.Packet{}, fmt.Errorf("%w: write schema file: %v", ErrProviderFailed, err)
+		}
+		_ = file.Close()
+		cleanupSchema = func() { _ = os.Remove(schemaPath) }
+	}
+	defer cleanupSchema()
 	result, err := p.Runner.Run(ctx, execution.Request{
-		Args:        CodexArgs(binaryOrDefault(p.Binary, "codex"), p.CWD, outputPath, p.Model, p.SchemaPath),
+		Args:        CodexArgs(binaryOrDefault(p.Binary, "codex"), p.CWD, outputPath, p.Model, schemaPath),
 		Input:       req.Prompt,
 		CWD:         p.CWD,
 		Env:         p.Env,
@@ -225,6 +245,10 @@ func CodexArgs(binary string, root string, outputPath string, model string, sche
 		args = append(args, "-m", model)
 	}
 	return args
+}
+
+func ReviewPacketSchemaJSON() string {
+	return `{"type":"object","additionalProperties":false,"required":["verdict"],"properties":{"verdict":{"type":"string","enum":["pass","fail"]},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["severity","summary"],"properties":{"id":{"type":"string"},"severity":{"type":"string","enum":["blocking","non_blocking"]},"summary":{"type":"string"}}}}}}`
 }
 
 func packetFromProviderResult(result execution.Result, runErr error, text string) (review.Packet, error) {
