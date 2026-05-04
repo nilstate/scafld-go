@@ -8,14 +8,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/nilstate/scafld-go/internal/adapters/clock"
-	"github.com/nilstate/scafld-go/internal/adapters/filesystem"
-	"github.com/nilstate/scafld-go/internal/adapters/jsonstore"
-	"github.com/nilstate/scafld-go/internal/adapters/markdown"
-	"github.com/nilstate/scafld-go/internal/app/cancel"
-	"github.com/nilstate/scafld-go/internal/app/complete"
-	"github.com/nilstate/scafld-go/internal/app/contracts"
-	"github.com/nilstate/scafld-go/internal/app/fail"
+	"github.com/nilstate/scafld/internal/adapters/clock"
+	"github.com/nilstate/scafld/internal/adapters/filesystem"
+	"github.com/nilstate/scafld/internal/adapters/jsonstore"
+	"github.com/nilstate/scafld/internal/adapters/markdown"
+	"github.com/nilstate/scafld/internal/app/cancel"
+	"github.com/nilstate/scafld/internal/app/complete"
+	"github.com/nilstate/scafld/internal/app/contracts"
+	"github.com/nilstate/scafld/internal/app/fail"
 )
 
 type options struct {

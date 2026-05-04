@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/nilstate/scafld-go/internal/core/workspace"
+	"github.com/nilstate/scafld/internal/core/workspace"
 )
 
 type fakeWorkspaceStore struct {

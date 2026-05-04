@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	corereview "github.com/nilstate/scafld-go/internal/core/review"
-	"github.com/nilstate/scafld-go/internal/core/session"
-	"github.com/nilstate/scafld-go/internal/core/spec"
-	"github.com/nilstate/scafld-go/internal/testkit/providerfake"
+	corereview "github.com/nilstate/scafld/internal/core/review"
+	"github.com/nilstate/scafld/internal/core/session"
+	"github.com/nilstate/scafld/internal/core/spec"
+	"github.com/nilstate/scafld/internal/testkit/providerfake"
 )
 
 type fakeSpecs struct{ model spec.Model }

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nilstate/scafld-go/internal/core/acceptance"
+	"github.com/nilstate/scafld/internal/core/acceptance"
 )
 
 type Status string

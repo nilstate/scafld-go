@@ -3,7 +3,7 @@ package report
 import (
 	"context"
 
-	"github.com/nilstate/scafld-go/internal/core/spec"
+	"github.com/nilstate/scafld/internal/core/spec"
 )
 
 type SpecStore interface {

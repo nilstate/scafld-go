@@ -3,7 +3,7 @@ package execspec
 import (
 	"context"
 
-	"github.com/nilstate/scafld-go/internal/app/build"
+	"github.com/nilstate/scafld/internal/app/build"
 )
 
 type Input = build.Input

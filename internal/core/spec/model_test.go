@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/nilstate/scafld-go/internal/core/acceptance"
+	"github.com/nilstate/scafld/internal/core/acceptance"
 )
 
 func TestErrorWrappingAndErrorClassification(t *testing.T) {

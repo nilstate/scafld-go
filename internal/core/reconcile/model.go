@@ -1,8 +1,8 @@
 package reconcile
 
 import (
-	"github.com/nilstate/scafld-go/internal/core/session"
-	"github.com/nilstate/scafld-go/internal/core/spec"
+	"github.com/nilstate/scafld/internal/core/session"
+	"github.com/nilstate/scafld/internal/core/spec"
 )
 
 var PhaseBlockFields = map[string]string{

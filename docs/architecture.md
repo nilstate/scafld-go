@@ -1,6 +1,6 @@
 # Architecture
 
-scafld-go uses a hexagonal layout with a hard import rule.
+scafld uses a hexagonal layout with a hard import rule.
 
 ```text
 cmd/scafld -> internal/adapters/cli -> internal/app -> internal/core

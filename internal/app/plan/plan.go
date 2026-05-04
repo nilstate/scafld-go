@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nilstate/scafld-go/internal/core/acceptance"
-	"github.com/nilstate/scafld-go/internal/core/spec"
+	"github.com/nilstate/scafld/internal/core/acceptance"
+	"github.com/nilstate/scafld/internal/core/spec"
 )
 
 var ErrMissingSpecStore = errors.New("missing spec store")
@@ -81,8 +81,8 @@ func Run(ctx context.Context, store SpecStore, clock Clock, input Input) (Output
 				Status:       "pending",
 			}},
 		}},
-		Metadata: map[string]string{"created_by": "scafld-go"},
-		Origin:   spec.Origin{CreatedBy: "scafld-go", Source: "plan"},
+		Metadata: map[string]string{"created_by": "scafld"},
+		Origin:   spec.Origin{CreatedBy: "scafld", Source: "plan"},
 	}
 	validation := spec.Validate(model)
 	if !validation.Valid {

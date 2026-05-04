@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nilstate/scafld-go/internal/core/execution"
+	"github.com/nilstate/scafld/internal/core/execution"
 )
 
 func TestCommandTimeoutDiagnosticCancel(t *testing.T) {

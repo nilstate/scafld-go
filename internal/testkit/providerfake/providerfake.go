@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/nilstate/scafld-go/internal/core/review"
+	"github.com/nilstate/scafld/internal/core/review"
 )
 
 type Mode string

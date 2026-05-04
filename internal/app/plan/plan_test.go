@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nilstate/scafld-go/internal/core/spec"
+	"github.com/nilstate/scafld/internal/core/spec"
 )
 
 type fakeStore struct{ model spec.Model }

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/nilstate/scafld-go/internal/adapters/cli"
-	"github.com/nilstate/scafld-go/internal/platform/signal"
+	"github.com/nilstate/scafld/internal/adapters/cli"
+	"github.com/nilstate/scafld/internal/platform/signal"
 )
 
 func main() {

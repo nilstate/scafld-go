@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/nilstate/scafld-go/internal/core/session"
-	"github.com/nilstate/scafld-go/internal/platform/atomicfile"
+	"github.com/nilstate/scafld/internal/core/session"
+	"github.com/nilstate/scafld/internal/platform/atomicfile"
 )
 
 var ErrSessionNotFound = errors.New("session not found")

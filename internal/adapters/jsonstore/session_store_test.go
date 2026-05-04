@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/nilstate/scafld-go/internal/core/session"
+	"github.com/nilstate/scafld/internal/core/session"
 )
 
 func TestAtomicReplaceCleanup(t *testing.T) {

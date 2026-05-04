@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/nilstate/scafld-go/internal/core/workspace"
+	"github.com/nilstate/scafld/internal/core/workspace"
 )
 
 var ErrMissingWorkspaceStore = errors.New("missing workspace store")

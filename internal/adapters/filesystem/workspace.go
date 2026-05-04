@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nilstate/scafld-go/internal/core/workspace"
-	"github.com/nilstate/scafld-go/internal/platform/atomicfile"
+	"github.com/nilstate/scafld/internal/core/workspace"
+	"github.com/nilstate/scafld/internal/platform/atomicfile"
 )
 
 type WorkspaceStore struct{}
@@ -52,7 +52,7 @@ func (WorkspaceStore) Init(ctx context.Context, root string) (workspace.InitResu
 	}
 	files := map[string][]byte{
 		".scafld/config.yaml":        []byte("version: 1\n"),
-		".scafld/core/manifest.json": []byte("{\"schema_version\":1,\"managed_by\":\"scafld-go\"}\n"),
+		".scafld/core/manifest.json": []byte("{\"schema_version\":1,\"managed_by\":\"scafld\"}\n"),
 	}
 	for rel, data := range files {
 		if err := ctx.Err(); err != nil {

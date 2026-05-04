@@ -10,10 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/nilstate/scafld-go/internal/core/execution"
+	"github.com/nilstate/scafld/internal/core/execution"
 )
 
 const defaultMaxCaptureBytes = 8 * 1024 * 1024
@@ -58,7 +57,7 @@ func (r Runner) Run(ctx context.Context, req execution.Request) (execution.Resul
 		cmd.Stdin = strings.NewReader(req.Input)
 	}
 	cmd.Env = append(os.Environ(), req.Env...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	configureProcessGroup(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return execution.Result{}, fmt.Errorf("stdout pipe: %w", err)
@@ -230,13 +229,13 @@ func terminate(cmd *exec.Cmd, waitCh <-chan error, reason string, grace time.Dur
 	if grace <= 0 {
 		grace = 250 * time.Millisecond
 	}
-	_ = signalProcessGroup(cmd, syscall.SIGTERM)
+	_ = terminateProcessGroup(cmd)
 	timer := time.NewTimer(grace)
 	defer timer.Stop()
 	select {
 	case <-waitCh:
 	case <-timer.C:
-		_ = signalProcessGroup(cmd, syscall.SIGKILL)
+		_ = killProcessGroup(cmd)
 		<-waitCh
 	}
 	exit := -1
@@ -244,13 +243,6 @@ func terminate(cmd *exec.Cmd, waitCh <-chan error, reason string, grace time.Dur
 		exit = cmd.ProcessState.ExitCode()
 	}
 	return execution.Result{ExitCode: exit, KillReason: reason, TimedOut: true}
-}
-
-func signalProcessGroup(cmd *exec.Cmd, sig syscall.Signal) error {
-	if cmd == nil || cmd.Process == nil {
-		return nil
-	}
-	return syscall.Kill(-cmd.Process.Pid, sig)
 }
 
 func processResult(cmd *exec.Cmd, killReason string, timedOut bool, started time.Time, state *capture, req execution.Request) execution.Result {

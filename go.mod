@@ -1,4 +1,4 @@
-module github.com/nilstate/scafld-go
+module github.com/nilstate/scafld
 
 go 1.26
 

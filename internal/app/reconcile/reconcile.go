@@ -3,9 +3,9 @@ package reconcile
 import (
 	"context"
 
-	corereconcile "github.com/nilstate/scafld-go/internal/core/reconcile"
-	"github.com/nilstate/scafld-go/internal/core/session"
-	"github.com/nilstate/scafld-go/internal/core/spec"
+	corereconcile "github.com/nilstate/scafld/internal/core/reconcile"
+	"github.com/nilstate/scafld/internal/core/session"
+	"github.com/nilstate/scafld/internal/core/spec"
 )
 
 type SpecStore interface {

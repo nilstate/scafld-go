@@ -1,6 +1,6 @@
 package runtime
 
-import "github.com/nilstate/scafld-go/internal/core/spec"
+import "github.com/nilstate/scafld/internal/core/spec"
 
 func NextAction(model spec.Model) string {
 	if model.CurrentState.AllowedFollowUp != "" {

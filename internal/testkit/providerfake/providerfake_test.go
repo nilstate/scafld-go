@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nilstate/scafld-go/internal/core/review"
+	"github.com/nilstate/scafld/internal/core/review"
 )
 
 func TestProviderFakeModes(t *testing.T) {

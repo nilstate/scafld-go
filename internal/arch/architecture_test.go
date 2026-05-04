@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-const modulePath = "github.com/nilstate/scafld-go"
+const modulePath = "github.com/nilstate/scafld"
 
 type goPackage struct {
 	ImportPath string

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "task_id": "package-registry-release",
+  "created_at": "2026-05-04T02:55:17Z",
+  "updated_at": "2026-05-04T02:55:19Z",
+  "entries": [
+    {
+      "id": "entry-1",
+      "type": "approval",
+      "recorded_at": "2026-05-04T02:55:17Z",
+      "status": "approved",
+      "reason": "spec approved"
+    },
+    {
+      "id": "entry-2",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T02:55:17Z",
+      "criterion_id": "ac1",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "make package-check \u0026\u0026 go test ./test/release \u0026\u0026 make release-snapshot",
+      "output": "npm notice\nnpm notice 📦  scafld@0.0.0\nnpm notice Tarball Contents\nnpm notice 521B README.md\nnpm notice 682B bin/scafld.js\nnpm notice 2.0kB lib/install.js\nnpm notice 1.4kB lib/platform.js\nnpm notice 786B package.json\nnpm notice Tarball Details\nnpm notice name: scafld\nnpm notice version: 0.0.0\nnpm notice filename: scafld-0.0.0.tgz\nnpm notice package size: 2.3 kB\nnpm notice unpacked size: 5.4 kB\nnpm notice shasum: 255aebbd70cbaa700f80deca14ad37f99e44cda4\nnpm notice integrity: sha512-mBfzQt+ubgd4Y[...]tcCzn1DgX82ag==\nnpm notice total files: 5\nnpm notice\nok  \tgithub.com/nilstate/scafld/test/release\t(cached)\nbuilding scafld_0.0.0-snapshot_darwin_amd64\nbuilding scafld_0.0.0-snapshot_darwin_arm64\nbuilding scafld_0.0.0-snapshot_linux_amd64\nbuilding scafld_0.0.0-snapshot_linux_arm64\nbuilding scafld_0.0.0-snapshot_windows_amd64.exe\nbuilding scafld_0.0.0-snapshot_windows_arm64.exe\n"
+    },
+    {
+      "id": "entry-3",
+      "type": "phase",
+      "recorded_at": "2026-05-04T02:55:17Z",
+      "phase_id": "phase1",
+      "status": "completed",
+      "reason": "all phase criteria passed"
+    },
+    {
+      "id": "entry-4",
+      "type": "review",
+      "recorded_at": "2026-05-04T02:55:19Z",
+      "status": "pass",
+      "reason": "review gate pass"
+    },
+    {
+      "id": "entry-5",
+      "type": "complete",
+      "recorded_at": "2026-05-04T02:55:19Z",
+      "status": "completed",
+      "reason": "task completed"
+    }
+  ],
+  "criterion_states": {
+    "ac1": {
+      "status": "pass",
+      "reason": "exit code was 0",
+      "updated_at": "2026-05-04T02:55:17Z",
+      "source_id": "entry-2"
+    }
+  },
+  "phase_blocks": {
+    "phase1": {
+      "status": "completed",
+      "reason": "all phase criteria passed",
+      "updated_at": "2026-05-04T02:55:17Z",
+      "source_id": "entry-3"
+    }
+  }
+}

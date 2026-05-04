@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nilstate/scafld-go/internal/core/acceptance"
-	"github.com/nilstate/scafld-go/internal/core/spec"
+	"github.com/nilstate/scafld/internal/core/acceptance"
+	"github.com/nilstate/scafld/internal/core/spec"
 )
 
 func TestGoldenRoundTripReleasedExamples(t *testing.T) {

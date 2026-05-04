@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nilstate/scafld-go/internal/core/session"
-	"github.com/nilstate/scafld-go/internal/core/spec"
+	"github.com/nilstate/scafld/internal/core/session"
+	"github.com/nilstate/scafld/internal/core/spec"
 )
 
 type fakeSpecStore struct{ model spec.Model }

@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nilstate/scafld-go/internal/core/acceptance"
-	"github.com/nilstate/scafld-go/internal/core/spec"
-	"github.com/nilstate/scafld-go/internal/platform/atomicfile"
+	"github.com/nilstate/scafld/internal/core/acceptance"
+	"github.com/nilstate/scafld/internal/core/spec"
+	"github.com/nilstate/scafld/internal/platform/atomicfile"
 )
 
 var (
