@@ -239,11 +239,12 @@ func runReview(ctx context.Context, args []string, stdout io.Writer, stderr io.W
 }
 
 func selectedReviewProvider(opts options, root string, taskID string) (review.Provider, error) {
+	runner := process.Runner{DiagnosticsDir: root + "/.scafld/runs/" + taskID + "/diagnostics"}
 	if command := opts.Values["provider-command"]; command != "" {
 		return providers.CommandProvider{
 			Command:     command,
 			CWD:         root,
-			Runner:      process.Runner{DiagnosticsDir: root + "/.scafld/runs/" + taskID + "/diagnostics"},
+			Runner:      runner,
 			Timeout:     30 * time.Minute,
 			IdleTimeout: 2 * time.Minute,
 		}, nil
@@ -253,6 +254,24 @@ func selectedReviewProvider(opts options, root string, taskID string) (review.Pr
 		return providers.LocalProvider{}, nil
 	case "command":
 		return nil, errors.New("--provider=command requires --provider-command")
+	case "claude":
+		return providers.ClaudeProvider{
+			Binary:      opts.Values["provider-binary"],
+			Model:       opts.Values["model"],
+			CWD:         root,
+			Runner:      runner,
+			Timeout:     30 * time.Minute,
+			IdleTimeout: 2 * time.Minute,
+		}, nil
+	case "codex", "auto":
+		return providers.CodexProvider{
+			Binary:      opts.Values["provider-binary"],
+			Model:       opts.Values["model"],
+			CWD:         root,
+			Runner:      runner,
+			Timeout:     30 * time.Minute,
+			IdleTimeout: 2 * time.Minute,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unknown review provider %q", provider)
 	}

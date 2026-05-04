@@ -30,10 +30,23 @@ func (r Runner) Run(ctx context.Context, req execution.Request) (execution.Resul
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if req.Command == "" {
-		return execution.Result{}, fmt.Errorf("command is required")
+	if req.Command == "" && len(req.Args) == 0 {
+		return execution.Result{}, fmt.Errorf("command or args are required")
 	}
-	cmd := exec.Command("sh", "-c", req.Command)
+	if req.Command != "" && len(req.Args) > 0 {
+		return execution.Result{}, fmt.Errorf("command and args are mutually exclusive")
+	}
+	displayCommand := req.Command
+	var cmd *exec.Cmd
+	if len(req.Args) > 0 {
+		if strings.TrimSpace(req.Args[0]) == "" {
+			return execution.Result{}, fmt.Errorf("args[0] is required")
+		}
+		cmd = exec.Command(req.Args[0], req.Args[1:]...)
+		displayCommand = strings.Join(req.Args, " ")
+	} else {
+		cmd = exec.Command("sh", "-c", req.Command)
+	}
 	if req.CWD != "" {
 		cmd.Dir = req.CWD
 	}
@@ -68,7 +81,7 @@ func (r Runner) Run(ctx context.Context, req execution.Request) (execution.Resul
 	result, waitErr := waitProcess(ctx, cmd, waitCh, state, req)
 	result.Stdout, result.Stderr, result.Output = state.snapshot()
 	if r.DiagnosticsDir != "" {
-		if path, writeErr := r.writeDiagnostic(req.Command, result); writeErr == nil {
+		if path, writeErr := r.writeDiagnostic(displayCommand, result); writeErr == nil {
 			result.DiagnosticPath = path
 		}
 	}

@@ -2,8 +2,12 @@ package providers
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -64,7 +68,7 @@ func (p CommandProvider) Invoke(ctx context.Context, req review.Request) (review
 	if err != nil && strings.TrimSpace(result.Stdout) == "" {
 		return review.Packet{}, fmt.Errorf("%w: %v", ErrProviderFailed, err)
 	}
-	packet, parseErr := review.ParseNDJSON(result.Stdout)
+	packet, parseErr := review.ParseText(result.Stdout)
 	if parseErr != nil {
 		if err != nil {
 			return review.Packet{}, fmt.Errorf("%w: %v", ErrProviderFailed, err)
@@ -78,4 +82,199 @@ func (p CommandProvider) Invoke(ctx context.Context, req review.Request) (review
 		return review.Packet{}, fmt.Errorf("%w: exit code %d", ErrProviderFailed, result.ExitCode)
 	}
 	return packet, nil
+}
+
+type ClaudeProvider struct {
+	Binary      string
+	Model       string
+	SessionID   string
+	SchemaJSON  string
+	CWD         string
+	Env         []string
+	Runner      Runner
+	Timeout     time.Duration
+	IdleTimeout time.Duration
+}
+
+func (p ClaudeProvider) Invoke(ctx context.Context, req review.Request) (review.Packet, error) {
+	if p.Runner == nil {
+		return review.Packet{}, fmt.Errorf("%w: runner is required", ErrProviderFailed)
+	}
+	sessionID := p.SessionID
+	if sessionID == "" {
+		sessionID = newUUID()
+	}
+	result, err := p.Runner.Run(ctx, execution.Request{
+		Args:        ClaudeArgs(binaryOrDefault(p.Binary, "claude"), p.Model, sessionID, p.SchemaJSON),
+		Input:       req.Prompt,
+		CWD:         p.CWD,
+		Env:         p.Env,
+		Timeout:     p.Timeout,
+		IdleTimeout: p.IdleTimeout,
+	})
+	return packetFromProviderResult(result, err, extractClaudeOutput(result.Stdout))
+}
+
+type CodexProvider struct {
+	Binary      string
+	Model       string
+	SchemaPath  string
+	OutputPath  string
+	CWD         string
+	Env         []string
+	Runner      Runner
+	Timeout     time.Duration
+	IdleTimeout time.Duration
+}
+
+func (p CodexProvider) Invoke(ctx context.Context, req review.Request) (review.Packet, error) {
+	if p.Runner == nil {
+		return review.Packet{}, fmt.Errorf("%w: runner is required", ErrProviderFailed)
+	}
+	outputPath := p.OutputPath
+	cleanup := func() {}
+	if outputPath == "" {
+		file, err := os.CreateTemp("", "scafld-codex-review-*.json")
+		if err != nil {
+			return review.Packet{}, fmt.Errorf("%w: create output file: %v", ErrProviderFailed, err)
+		}
+		outputPath = file.Name()
+		_ = file.Close()
+		cleanup = func() { _ = os.Remove(outputPath) }
+	}
+	defer cleanup()
+	result, err := p.Runner.Run(ctx, execution.Request{
+		Args:        CodexArgs(binaryOrDefault(p.Binary, "codex"), p.CWD, outputPath, p.Model, p.SchemaPath),
+		Input:       req.Prompt,
+		CWD:         p.CWD,
+		Env:         p.Env,
+		Timeout:     p.Timeout,
+		IdleTimeout: p.IdleTimeout,
+	})
+	body := strings.TrimSpace(result.Stdout)
+	if data, readErr := os.ReadFile(filepath.Clean(outputPath)); readErr == nil && strings.TrimSpace(string(data)) != "" {
+		body = string(data)
+	}
+	return packetFromProviderResult(result, err, body)
+}
+
+func ClaudeArgs(binary string, model string, sessionID string, schemaJSON string) []string {
+	args := []string{
+		binary,
+		"-p",
+		"--output-format",
+		"stream-json",
+		"--verbose",
+		"--include-partial-messages",
+		"--permission-mode",
+		"plan",
+		"--allowedTools",
+		"Read,Grep,Glob",
+		"--disallowedTools",
+		"Agent,Task,Bash,Edit,MultiEdit,Write,NotebookEdit",
+		"--mcp-config",
+		`{"mcpServers":{}}`,
+		"--strict-mcp-config",
+		"--session-id",
+		sessionID,
+	}
+	if schemaJSON != "" {
+		args = append(args, "--json-schema", schemaJSON)
+	}
+	if model != "" {
+		args = append(args, "--model", model)
+	}
+	return args
+}
+
+func CodexArgs(binary string, root string, outputPath string, model string, schemaPath string) []string {
+	args := []string{
+		binary,
+		"exec",
+		"--sandbox",
+		"read-only",
+		"--skip-git-repo-check",
+		"--cd",
+		root,
+		"--ephemeral",
+		"--ignore-user-config",
+		"--color",
+		"never",
+		"--output-last-message",
+		outputPath,
+	}
+	if schemaPath != "" {
+		args = append(args, "--output-schema", schemaPath)
+	}
+	if model != "" {
+		args = append(args, "-m", model)
+	}
+	return args
+}
+
+func packetFromProviderResult(result execution.Result, runErr error, text string) (review.Packet, error) {
+	if runErr != nil && strings.TrimSpace(text) == "" {
+		return review.Packet{}, fmt.Errorf("%w: %v", ErrProviderFailed, runErr)
+	}
+	packet, parseErr := review.ParseText(text)
+	if parseErr != nil {
+		if runErr != nil {
+			return review.Packet{}, fmt.Errorf("%w: %v", ErrProviderFailed, runErr)
+		}
+		return review.Packet{}, parseErr
+	}
+	if runErr != nil {
+		return review.Packet{}, fmt.Errorf("%w: %v", ErrProviderFailed, runErr)
+	}
+	if result.ExitCode != 0 && packet.Verdict != review.VerdictFail {
+		return review.Packet{}, fmt.Errorf("%w: exit code %d", ErrProviderFailed, result.ExitCode)
+	}
+	return packet, nil
+}
+
+func extractClaudeOutput(stdout string) string {
+	var result map[string]any
+	for _, raw := range strings.Split(stdout, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		var event map[string]any
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			continue
+		}
+		if event["type"] == "result" {
+			result = event
+		}
+	}
+	if len(result) > 0 {
+		if structured, ok := result["structured_output"].(map[string]any); ok {
+			if data, err := json.Marshal(structured); err == nil {
+				return string(data)
+			}
+		}
+		for _, key := range []string{"result", "output", "response", "text", "content"} {
+			if value, ok := result[key].(string); ok && strings.TrimSpace(value) != "" {
+				return value
+			}
+		}
+	}
+	return stdout
+}
+
+func binaryOrDefault(binary string, fallback string) string {
+	if strings.TrimSpace(binary) == "" {
+		return fallback
+	}
+	return binary
+}
+
+func newUUID() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }

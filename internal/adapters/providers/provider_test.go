@@ -3,6 +3,8 @@ package providers
 import (
 	"context"
 	"errors"
+	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -25,10 +27,14 @@ type fakeRunner struct {
 	result execution.Result
 	err    error
 	req    execution.Request
+	onRun  func(execution.Request)
 }
 
 func (f *fakeRunner) Run(_ context.Context, req execution.Request) (execution.Result, error) {
 	f.req = req
+	if f.onRun != nil {
+		f.onRun(req)
+	}
 	return f.result, f.err
 }
 
@@ -71,5 +77,74 @@ func TestCommandProviderFailsClosedOnMissingRunnerInvalidOutputAndCleanPacketNon
 	runner := &fakeRunner{result: execution.Result{ExitCode: 1, Stdout: `{"type":"verdict","verdict":"pass"}` + "\n"}}
 	if _, err := (CommandProvider{Command: "reviewer", Runner: runner}).Invoke(context.Background(), review.Request{TaskID: "task"}); !errors.Is(err, ErrProviderFailed) {
 		t.Fatalf("nonzero clean packet err = %v", err)
+	}
+}
+
+func TestClaudeProviderBuildsRestrictedStreamJSONArgsAndExtractsStructuredOutput(t *testing.T) {
+	t.Parallel()
+
+	stdout := `{"type":"system","subtype":"init","model":"claude-test"}` + "\n" +
+		`{"type":"result","structured_output":{"findings":[{"severity":"blocking","summary":"bug"}]}}` + "\n"
+	runner := &fakeRunner{result: execution.Result{Stdout: stdout}}
+	packet, err := (ClaudeProvider{
+		Binary:     "claude-bin",
+		Model:      "claude-model",
+		SessionID:  "00000000-0000-4000-8000-000000000000",
+		SchemaJSON: `{"type":"object"}`,
+		CWD:        "/tmp/work",
+		Runner:     runner,
+	}).Invoke(context.Background(), review.Request{TaskID: "task", Prompt: "prompt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packet.Verdict != review.VerdictFail || len(packet.Findings) != 1 {
+		t.Fatalf("packet = %+v", packet)
+	}
+	wantArgs := []string{
+		"claude-bin", "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
+		"--permission-mode", "plan", "--allowedTools", "Read,Grep,Glob",
+		"--disallowedTools", "Agent,Task,Bash,Edit,MultiEdit,Write,NotebookEdit",
+		"--mcp-config", `{"mcpServers":{}}`, "--strict-mcp-config",
+		"--session-id", "00000000-0000-4000-8000-000000000000",
+		"--json-schema", `{"type":"object"}`, "--model", "claude-model",
+	}
+	if !reflect.DeepEqual(runner.req.Args, wantArgs) || runner.req.Input != "prompt" || runner.req.CWD != "/tmp/work" {
+		t.Fatalf("request = %+v", runner.req)
+	}
+}
+
+func TestCodexProviderBuildsReadOnlyEphemeralArgsAndReadsOutputFile(t *testing.T) {
+	t.Parallel()
+
+	outputPath := t.TempDir() + "/packet.json"
+	runner := &fakeRunner{
+		result: execution.Result{Stdout: "progress only"},
+		onRun: func(execution.Request) {
+			if err := os.WriteFile(outputPath, []byte(`{"verdict":"pass"}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+	packet, err := (CodexProvider{
+		Binary:     "codex-bin",
+		Model:      "gpt-test",
+		SchemaPath: "/tmp/schema.json",
+		OutputPath: outputPath,
+		CWD:        "/tmp/work",
+		Runner:     runner,
+	}).Invoke(context.Background(), review.Request{TaskID: "task", Prompt: "prompt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packet.Verdict != review.VerdictPass {
+		t.Fatalf("packet = %+v", packet)
+	}
+	wantArgs := []string{
+		"codex-bin", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "--cd", "/tmp/work",
+		"--ephemeral", "--ignore-user-config", "--color", "never", "--output-last-message", outputPath,
+		"--output-schema", "/tmp/schema.json", "-m", "gpt-test",
+	}
+	if !reflect.DeepEqual(runner.req.Args, wantArgs) || runner.req.Input != "prompt" {
+		t.Fatalf("request = %+v", runner.req)
 	}
 }

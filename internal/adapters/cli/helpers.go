@@ -33,7 +33,7 @@ func parseOptions(args []string) (options, error) {
 			opts.JSON = true
 			continue
 		}
-		if arg == "--root" || arg == "--title" || arg == "--summary" || arg == "--command" || arg == "--size" || arg == "--risk" || arg == "--reason" || arg == "--provider" || arg == "--provider-command" {
+		if arg == "--root" || arg == "--title" || arg == "--summary" || arg == "--command" || arg == "--size" || arg == "--risk" || arg == "--reason" || arg == "--provider" || arg == "--provider-command" || arg == "--provider-binary" || arg == "--model" {
 			if i+1 >= len(args) {
 				return opts, fmt.Errorf("%s requires a value", arg)
 			}

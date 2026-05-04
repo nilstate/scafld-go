@@ -4,6 +4,7 @@ import "time"
 
 type Request struct {
 	Command        string
+	Args           []string
 	Input          string
 	CWD            string
 	Env            []string

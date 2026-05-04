@@ -30,3 +30,19 @@ func TestValidatePacketClassifiesDirectProviderOutput(t *testing.T) {
 		t.Fatalf("invalid verdict err = %v", err)
 	}
 }
+
+func TestParseTextAcceptsPacketJSONAndRejectsEmptyOutput(t *testing.T) {
+	t.Parallel()
+
+	packet, err := ParseText(`{"findings":[{"severity":"blocking","summary":"bug"}]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packet.Verdict != VerdictFail || packet.Findings[0].ID != "finding-1" {
+		t.Fatalf("packet = %+v", packet)
+	}
+	_, err = ParseText("")
+	if !errors.Is(err, ErrInvalidPacket) {
+		t.Fatalf("empty output err = %v", err)
+	}
+}

@@ -39,6 +39,32 @@ type Request struct {
 	Prompt string
 }
 
+func ParseText(text string) (Packet, error) {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return Packet{}, fmt.Errorf("%w: empty provider output", ErrInvalidPacket)
+	}
+	if strings.HasPrefix(trimmed, "{") {
+		var probe map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(trimmed), &probe); err != nil {
+			return Packet{}, fmt.Errorf("%w: %v", ErrInvalidPacket, err)
+		}
+		if _, hasType := probe["type"]; !hasType {
+			var packet Packet
+			if err := json.Unmarshal([]byte(trimmed), &packet); err != nil {
+				return Packet{}, fmt.Errorf("%w: %v", ErrInvalidPacket, err)
+			}
+			packet.Raw = text
+			packet = NormalizePacket(packet)
+			if err := ValidatePacket(packet); err != nil {
+				return Packet{}, err
+			}
+			return packet, nil
+		}
+	}
+	return ParseNDJSON(text)
+}
+
 func ParseNDJSON(text string) (Packet, error) {
 	var packet Packet
 	scanner := bufio.NewScanner(strings.NewReader(text))
@@ -92,6 +118,21 @@ func ParseNDJSON(text string) (Packet, error) {
 		packet.Verdict = VerdictFromFindings(packet.Findings)
 	}
 	return packet, nil
+}
+
+func NormalizePacket(packet Packet) Packet {
+	for i := range packet.Findings {
+		if packet.Findings[i].ID == "" {
+			packet.Findings[i].ID = fmt.Sprintf("finding-%d", i+1)
+		}
+		if packet.Findings[i].Severity == "" {
+			packet.Findings[i].Severity = SeverityNonBlocking
+		}
+	}
+	if packet.Verdict == "" {
+		packet.Verdict = VerdictFromFindings(packet.Findings)
+	}
+	return packet
 }
 
 func ValidatePacket(packet Packet) error {
