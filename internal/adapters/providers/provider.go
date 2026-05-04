@@ -105,14 +105,24 @@ func (p ClaudeProvider) Invoke(ctx context.Context, req review.Request) (review.
 		sessionID = newUUID()
 	}
 	result, err := p.Runner.Run(ctx, execution.Request{
-		Args:        ClaudeArgs(binaryOrDefault(p.Binary, "claude"), p.Model, sessionID, p.SchemaJSON),
-		Input:       req.Prompt,
-		CWD:         p.CWD,
-		Env:         p.Env,
-		Timeout:     p.Timeout,
-		IdleTimeout: p.IdleTimeout,
+		Args:                 ClaudeArgs(binaryOrDefault(p.Binary, "claude"), p.Model, sessionID, p.SchemaJSON),
+		Input:                req.Prompt,
+		CWD:                  p.CWD,
+		Env:                  p.Env,
+		Timeout:              p.Timeout,
+		IdleTimeout:          p.IdleTimeout,
+		StdoutEventInspector: ClaudeEventName,
 	})
-	return packetFromProviderResult(result, err, extractClaudeOutput(result.Stdout))
+	extracted := extractClaudeOutput(result.Stdout)
+	packet, packetErr := packetFromProviderResult(result, err, extracted.Body)
+	if packetErr != nil {
+		return review.Packet{}, packetErr
+	}
+	packet.Provider = "claude"
+	packet.Model = extracted.Model
+	packet.SessionID = extracted.SessionID
+	packet.EventSummary = eventSummary(result.StdoutEvents, extracted.Events)
+	return packet, nil
 }
 
 type CodexProvider struct {
@@ -155,7 +165,12 @@ func (p CodexProvider) Invoke(ctx context.Context, req review.Request) (review.P
 	if data, readErr := os.ReadFile(filepath.Clean(outputPath)); readErr == nil && strings.TrimSpace(string(data)) != "" {
 		body = string(data)
 	}
-	return packetFromProviderResult(result, err, body)
+	packet, packetErr := packetFromProviderResult(result, err, body)
+	if packetErr != nil {
+		return review.Packet{}, packetErr
+	}
+	packet.Provider = "codex"
+	return packet, nil
 }
 
 func ClaudeArgs(binary string, model string, sessionID string, schemaJSON string) []string {
@@ -232,7 +247,15 @@ func packetFromProviderResult(result execution.Result, runErr error, text string
 	return packet, nil
 }
 
-func extractClaudeOutput(stdout string) string {
+type claudeOutput struct {
+	Body      string
+	Model     string
+	SessionID string
+	Events    map[string]int
+}
+
+func extractClaudeOutput(stdout string) claudeOutput {
+	out := claudeOutput{Body: stdout, Events: map[string]int{}}
 	var result map[string]any
 	for _, raw := range strings.Split(stdout, "\n") {
 		line := strings.TrimSpace(raw)
@@ -243,6 +266,13 @@ func extractClaudeOutput(stdout string) string {
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
 			continue
 		}
+		if name := ClaudeEventName(line); name != "" {
+			out.Events[name]++
+		}
+		if event["type"] == "system" && event["subtype"] == "init" {
+			out.Model = stringField(event, "model", "model_id", "modelId")
+			out.SessionID = stringField(event, "session_id", "sessionId")
+		}
 		if event["type"] == "result" {
 			result = event
 		}
@@ -250,16 +280,58 @@ func extractClaudeOutput(stdout string) string {
 	if len(result) > 0 {
 		if structured, ok := result["structured_output"].(map[string]any); ok {
 			if data, err := json.Marshal(structured); err == nil {
-				return string(data)
+				out.Body = string(data)
+				return out
 			}
 		}
 		for _, key := range []string{"result", "output", "response", "text", "content"} {
 			if value, ok := result[key].(string); ok && strings.TrimSpace(value) != "" {
-				return value
+				out.Body = value
+				return out
 			}
 		}
 	}
-	return stdout
+	return out
+}
+
+func ClaudeEventName(line string) string {
+	var event map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimSpace(line)), &event); err != nil {
+		return ""
+	}
+	eventType, _ := event["type"].(string)
+	if eventType == "" {
+		return ""
+	}
+	subtype, _ := event["subtype"].(string)
+	if subtype != "" {
+		return eventType + "." + subtype
+	}
+	return eventType
+}
+
+func stringField(values map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := values[key].(string); ok {
+			return value
+		}
+	}
+	return ""
+}
+
+func eventSummary(primary map[string]int, fallback map[string]int) map[string]int {
+	source := fallback
+	if len(primary) > 0 {
+		source = primary
+	}
+	merged := make(map[string]int, len(source))
+	for key, value := range source {
+		merged[key] = value
+	}
+	if len(merged) == 0 {
+		return nil
+	}
+	return merged
 }
 
 func binaryOrDefault(binary string, fallback string) string {

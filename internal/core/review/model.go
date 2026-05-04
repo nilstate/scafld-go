@@ -29,9 +29,13 @@ type Finding struct {
 }
 
 type Packet struct {
-	Verdict  string    `json:"verdict"`
-	Findings []Finding `json:"findings,omitempty"`
-	Raw      string    `json:"-"`
+	Verdict      string         `json:"verdict"`
+	Findings     []Finding      `json:"findings,omitempty"`
+	Provider     string         `json:"provider,omitempty"`
+	Model        string         `json:"model,omitempty"`
+	SessionID    string         `json:"session_id,omitempty"`
+	EventSummary map[string]int `json:"event_summary,omitempty"`
+	Raw          string         `json:"-"`
 }
 
 type Request struct {

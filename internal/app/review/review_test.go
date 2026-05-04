@@ -134,12 +134,21 @@ func TestWorkspaceMutationGuardOverridesCleanProviderPacket(t *testing.T) {
 	t.Parallel()
 
 	specs := &fakeSpecs{model: spec.Model{TaskID: "task", Title: "Task"}}
-	workspace := &fakeWorkspace{snapshots: [][]string{{"existing"}, {"existing", "MUTATED"}}}
+	workspace := &fakeWorkspace{snapshots: [][]string{{"hash-a existing"}, {"hash-b existing"}}}
 	out, err := Run(context.Background(), specs, &fakeSessions{}, workspace, fakeProvider{packet: corereview.Packet{Verdict: corereview.VerdictPass}}, fakeClock{}, "task")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if out.Verdict != corereview.VerdictFail || len(out.Findings) != 1 || out.Findings[0].ID != "workspace_mutation" {
 		t.Fatalf("mutation guard output = %+v", out)
+	}
+}
+
+func TestWorkspaceMutationsDetectsAddModifyAndDelete(t *testing.T) {
+	t.Parallel()
+
+	mutated := workspaceMutations([]string{"hash-a same", "hash-old modified", "hash-delete deleted"}, []string{"hash-a same", "hash-new modified", "hash-add added"})
+	if len(mutated) != 4 {
+		t.Fatalf("mutations = %+v", mutated)
 	}
 }

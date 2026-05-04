@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,6 +42,29 @@ func TestCommandTimeoutDiagnosticCancel(t *testing.T) {
 	}
 	if result.Stdout != "argv" {
 		t.Fatalf("argv execution failed: %+v", result)
+	}
+	result, err = (Runner{}).Run(context.Background(), execution.Request{
+		Command:         `printf '{"type":"system"}\n{"type":"result","subtype":"success"}\nabcdef'`,
+		Timeout:         time.Second,
+		MaxCaptureBytes: 4,
+		StdoutEventInspector: func(line string) string {
+			if strings.Contains(line, "result") {
+				return "result.success"
+			}
+			if strings.Contains(line, "system") {
+				return "system"
+			}
+			return ""
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DroppedBytes == 0 || !strings.Contains(result.Stdout, "cdef") {
+		t.Fatalf("output should be capped and keep tail: %+v", result)
+	}
+	if result.StdoutEvents["system"] != 1 || result.StdoutEvents["result.success"] != 1 {
+		t.Fatalf("events = %+v", result.StdoutEvents)
 	}
 	_, err = (Runner{}).Run(context.Background(), execution.Request{Command: "sleep 1", Timeout: time.Millisecond})
 	if !errors.Is(err, ErrTimeout) {

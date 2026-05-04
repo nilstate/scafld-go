@@ -83,7 +83,7 @@ func TestCommandProviderFailsClosedOnMissingRunnerInvalidOutputAndCleanPacketNon
 func TestClaudeProviderBuildsRestrictedStreamJSONArgsAndExtractsStructuredOutput(t *testing.T) {
 	t.Parallel()
 
-	stdout := `{"type":"system","subtype":"init","model":"claude-test"}` + "\n" +
+	stdout := `{"type":"system","subtype":"init","model":"claude-test","session_id":"observed-session"}` + "\n" +
 		`{"type":"result","structured_output":{"findings":[{"severity":"blocking","summary":"bug"}]}}` + "\n"
 	runner := &fakeRunner{result: execution.Result{Stdout: stdout}}
 	packet, err := (ClaudeProvider{
@@ -99,6 +99,9 @@ func TestClaudeProviderBuildsRestrictedStreamJSONArgsAndExtractsStructuredOutput
 	}
 	if packet.Verdict != review.VerdictFail || len(packet.Findings) != 1 {
 		t.Fatalf("packet = %+v", packet)
+	}
+	if packet.Provider != "claude" || packet.Model != "claude-test" || packet.SessionID == "" || packet.EventSummary["system.init"] != 1 || packet.EventSummary["result"] != 1 {
+		t.Fatalf("provenance = %+v", packet)
 	}
 	wantArgs := []string{
 		"claude-bin", "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
@@ -139,6 +142,9 @@ func TestCodexProviderBuildsReadOnlyEphemeralArgsAndReadsOutputFile(t *testing.T
 	if packet.Verdict != review.VerdictPass {
 		t.Fatalf("packet = %+v", packet)
 	}
+	if packet.Provider != "codex" {
+		t.Fatalf("provider = %q", packet.Provider)
+	}
 	wantArgs := []string{
 		"codex-bin", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "--cd", "/tmp/work",
 		"--ephemeral", "--ignore-user-config", "--color", "never", "--output-last-message", outputPath,
@@ -146,5 +152,16 @@ func TestCodexProviderBuildsReadOnlyEphemeralArgsAndReadsOutputFile(t *testing.T
 	}
 	if !reflect.DeepEqual(runner.req.Args, wantArgs) || runner.req.Input != "prompt" {
 		t.Fatalf("request = %+v", runner.req)
+	}
+}
+
+func TestClaudeEventName(t *testing.T) {
+	t.Parallel()
+
+	if got := ClaudeEventName(`{"type":"result","subtype":"success"}`); got != "result.success" {
+		t.Fatalf("event = %q", got)
+	}
+	if got := ClaudeEventName(`not-json`); got != "" {
+		t.Fatalf("event = %q", got)
 	}
 }

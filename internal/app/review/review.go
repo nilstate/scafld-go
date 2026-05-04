@@ -118,6 +118,10 @@ func workspaceMutations(before []string, after []string) []string {
 		if !seen[path] {
 			mutated = append(mutated, path)
 		}
+		delete(seen, path)
+	}
+	for path := range seen {
+		mutated = append(mutated, path)
 	}
 	return mutated
 }
