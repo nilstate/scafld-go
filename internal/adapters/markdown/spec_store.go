@@ -26,6 +26,8 @@ var (
 	commandLinePattern   = regexp.MustCompile(`^\s+- Command:\s*` + "`" + `(.*)` + "`" + `\s*$`)
 	expectedLinePattern  = regexp.MustCompile(`^\s+- Expected kind:\s*` + "`" + `?([^` + "`" + `\s]+)` + "`" + `?\s*$`)
 	statusLinePattern    = regexp.MustCompile(`^\s+- Status:\s*([a-z_]+)\s*$`)
+	evidenceLinePattern  = regexp.MustCompile(`^\s+- Evidence:\s*(.*)\s*$`)
+	sourceLinePattern    = regexp.MustCompile(`^\s+- Source event:\s*(.*)\s*$`)
 )
 
 type Store struct {
@@ -170,6 +172,7 @@ func Parse(data []byte) (spec.Model, error) {
 	var phase *spec.Phase
 	var criterion *spec.Criterion
 	var phaseField string
+	var listTarget *[]string
 	inFence = false
 	for _, line := range body {
 		if strings.HasPrefix(line, "```") {
@@ -201,6 +204,7 @@ func Parse(data []byte) (spec.Model, error) {
 			phase = nil
 			criterion = nil
 			phaseField = ""
+			listTarget = listForSection(&model, section)
 			continue
 		}
 		if section == "summary" && strings.TrimSpace(line) != "" {
@@ -208,6 +212,52 @@ func Parse(data []byte) (spec.Model, error) {
 				model.Summary += "\n"
 			}
 			model.Summary += line
+			continue
+		}
+		if section == "current state" {
+			parseCurrentStateLine(&model, line)
+			continue
+		}
+		if section == "acceptance" {
+			if strings.HasPrefix(line, "Profile:") {
+				model.Acceptance.ValidationProfile = strings.TrimSpace(strings.TrimPrefix(line, "Profile:"))
+				continue
+			}
+			if line == "Validation:" {
+				continue
+			}
+		}
+		if section == "review" {
+			if strings.HasPrefix(line, "Status:") {
+				model.Review.Status = strings.TrimSpace(strings.TrimPrefix(line, "Status:"))
+				continue
+			}
+			if strings.HasPrefix(line, "Verdict:") {
+				model.Review.Verdict = strings.TrimSpace(strings.TrimPrefix(line, "Verdict:"))
+				continue
+			}
+		}
+		if section == "metadata" && strings.HasPrefix(line, "- ") {
+			key, value, ok := strings.Cut(strings.TrimPrefix(line, "- "), ":")
+			if ok && strings.TrimSpace(key) != "none" {
+				model.Metadata[strings.TrimSpace(key)] = strings.TrimSpace(value)
+			}
+			continue
+		}
+		if section == "origin" {
+			if strings.HasPrefix(line, "Created by:") {
+				model.Origin.CreatedBy = strings.TrimSpace(strings.TrimPrefix(line, "Created by:"))
+			}
+			if strings.HasPrefix(line, "Source:") {
+				model.Origin.Source = strings.TrimSpace(strings.TrimPrefix(line, "Source:"))
+			}
+			continue
+		}
+		if listTarget != nil && strings.HasPrefix(line, "- ") {
+			value := strings.TrimSpace(strings.TrimPrefix(line, "- "))
+			if value != "none" && value != "" {
+				*listTarget = append(*listTarget, value)
+			}
 			continue
 		}
 		if strings.HasPrefix(line, "Status:") {
@@ -220,6 +270,10 @@ func Parse(data []byte) (spec.Model, error) {
 		if phase != nil {
 			if strings.HasPrefix(line, "Objective:") {
 				phase.Objective = strings.TrimSpace(strings.TrimPrefix(line, "Objective:"))
+				continue
+			}
+			if strings.HasPrefix(line, "Dependencies:") {
+				phase.Dependencies = splitCSV(strings.TrimSpace(strings.TrimPrefix(line, "Dependencies:")))
 				continue
 			}
 			if line == "Changes:" {
@@ -260,6 +314,12 @@ func Parse(data []byte) (spec.Model, error) {
 			if match := statusLinePattern.FindStringSubmatch(line); match != nil {
 				criterion.Status = match[1]
 			}
+			if match := evidenceLinePattern.FindStringSubmatch(line); match != nil {
+				criterion.Evidence = match[1]
+			}
+			if match := sourceLinePattern.FindStringSubmatch(line); match != nil {
+				criterion.SourceEvent = match[1]
+			}
 		}
 	}
 	if inFence {
@@ -282,10 +342,13 @@ func Render(model spec.Model) []byte {
 	fmt.Fprintf(&b, "Latest runner update: %s\n", fallback(model.CurrentState.LatestRunnerUpdate, "none"))
 	fmt.Fprintf(&b, "Review gate: %s\n\n", fallback(model.CurrentState.ReviewGate, "not_started"))
 	fmt.Fprintf(&b, "## Summary\n\n%s\n\n", fallback(model.Summary, "No summary yet."))
+	renderContext(&b, model.Context)
 	renderStringList(&b, "Objectives", model.Objectives)
 	renderStringList(&b, "Scope", model.Scope)
 	renderStringList(&b, "Dependencies", model.Dependencies)
 	renderStringList(&b, "Assumptions", model.Assumptions)
+	renderStringList(&b, "Touchpoints", model.Touchpoints)
+	renderRisks(&b, model.Risks)
 	fmt.Fprintf(&b, "## Acceptance\n\nProfile: %s\n\nValidation:\n", fallback(model.Acceptance.ValidationProfile, "standard"))
 	renderCriteria(&b, model.Acceptance.Criteria)
 	if len(model.Acceptance.Criteria) == 0 {
@@ -392,6 +455,34 @@ func renderStringList(b *strings.Builder, title string, items []string) {
 	fmt.Fprintf(b, "\n")
 }
 
+func renderContext(b *strings.Builder, context spec.Context) {
+	if context.CWD == "" && len(context.Packages) == 0 && len(context.FilesImpacted) == 0 && len(context.Invariants) == 0 && len(context.RelatedDocs) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "## Context\n\n")
+	if context.CWD != "" {
+		fmt.Fprintf(b, "CWD: `%s`\n\n", context.CWD)
+	}
+	renderBullets(b, context.Packages)
+	fmt.Fprintf(b, "\n")
+}
+
+func renderRisks(b *strings.Builder, risks []spec.Risk) {
+	fmt.Fprintf(b, "## Risks\n\n")
+	if len(risks) == 0 {
+		fmt.Fprintf(b, "- none\n\n")
+		return
+	}
+	for _, risk := range risks {
+		fmt.Fprintf(b, "- %s", risk.Description)
+		if risk.Mitigation != "" {
+			fmt.Fprintf(b, " - %s", risk.Mitigation)
+		}
+		fmt.Fprintf(b, "\n")
+	}
+	fmt.Fprintf(b, "\n")
+}
+
 func renderBullets(b *strings.Builder, items []string) {
 	if len(items) == 0 {
 		fmt.Fprintf(b, "- none\n")
@@ -441,4 +532,66 @@ func splitLines(text string) []string {
 		lines = append(lines, scanner.Text())
 	}
 	return lines
+}
+
+func listForSection(model *spec.Model, section string) *[]string {
+	switch section {
+	case "objectives":
+		return &model.Objectives
+	case "scope":
+		return &model.Scope
+	case "dependencies":
+		return &model.Dependencies
+	case "assumptions":
+		return &model.Assumptions
+	case "touchpoints":
+		return &model.Touchpoints
+	case "rollback":
+		return &model.Rollback
+	case "self eval":
+		return &model.SelfEval
+	case "deviations":
+		return &model.Deviations
+	default:
+		return nil
+	}
+}
+
+func parseCurrentStateLine(model *spec.Model, line string) {
+	key, value, ok := strings.Cut(line, ":")
+	if !ok {
+		return
+	}
+	value = strings.Trim(strings.TrimSpace(value), "`")
+	switch strings.ToLower(strings.TrimSpace(key)) {
+	case "current phase":
+		model.CurrentState.CurrentPhase = value
+	case "next":
+		model.CurrentState.Next = value
+	case "reason":
+		model.CurrentState.Reason = value
+	case "blockers":
+		model.CurrentState.Blockers = value
+	case "allowed follow-up command":
+		model.CurrentState.AllowedFollowUp = value
+	case "latest runner update":
+		model.CurrentState.LatestRunnerUpdate = value
+	case "review gate":
+		model.CurrentState.ReviewGate = value
+	}
+}
+
+func splitCSV(value string) []string {
+	if value == "" || value == "none" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }

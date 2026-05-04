@@ -74,6 +74,21 @@ func Run(ctx context.Context, specs SpecStore, sessions SessionStore, runner Run
 		}
 	}
 	ledger, _ = sessions.Load(ctx, model.TaskID)
+	for _, phase := range model.Phases {
+		status, reason := phaseEvidenceState(phase, ledger)
+		if status == "" {
+			continue
+		}
+		ledger, err = sessions.Append(ctx, model.TaskID, session.Entry{
+			Type:    "phase",
+			PhaseID: phase.ID,
+			Status:  status,
+			Reason:  reason,
+		}, now)
+		if err != nil {
+			return Output{}, fmt.Errorf("append phase evidence: %w", err)
+		}
+	}
 	replayed := session.Replay(ledger)
 	passed, failed := 0, 0
 	for _, state := range replayed.CriterionStates {
@@ -87,9 +102,12 @@ func Run(ctx context.Context, specs SpecStore, sessions SessionStore, runner Run
 	if failed > 0 {
 		model.Status = spec.StatusBlocked
 		model.CurrentState.Next = "fail or repair"
+		model.CurrentState.AllowedFollowUp = "scafld status " + model.TaskID
 	} else {
 		model.Status = spec.StatusReview
 		model.CurrentState.Next = "review"
+		model.CurrentState.AllowedFollowUp = "scafld review " + model.TaskID
+		model.CurrentState.ReviewGate = "not_started"
 	}
 	model.Updated = now
 	model = reconcile.FromSession(model, ledger)
@@ -112,4 +130,24 @@ func snippet(s string) string {
 		return s[:1000]
 	}
 	return s
+}
+
+func phaseEvidenceState(phase spec.Phase, ledger session.Session) (string, string) {
+	if len(phase.Acceptance) == 0 {
+		return "", ""
+	}
+	allPass := true
+	for _, criterion := range phase.Acceptance {
+		state, ok := ledger.CriterionStates[criterion.ID]
+		if !ok {
+			return "", ""
+		}
+		if state.Status != "pass" {
+			allPass = false
+		}
+	}
+	if allPass {
+		return "completed", "all phase criteria passed"
+	}
+	return "blocked", "one or more phase criteria failed"
 }

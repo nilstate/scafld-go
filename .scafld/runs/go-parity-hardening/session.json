@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "task_id": "go-parity-hardening",
+  "created_at": "2026-05-04T00:52:49Z",
+  "updated_at": "2026-05-04T00:54:47Z",
+  "entries": [
+    {
+      "id": "entry-1",
+      "type": "approval",
+      "recorded_at": "2026-05-04T00:52:49Z",
+      "status": "approved",
+      "reason": "spec approved"
+    },
+    {
+      "id": "entry-2",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T00:52:49Z",
+      "criterion_id": "ac1",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "go test ./internal/adapters/markdown -run 'Golden|RoundTrip|Literate'",
+      "output": "ok  \tgithub.com/nilstate/scafld-go/internal/adapters/markdown\t0.150s\n"
+    },
+    {
+      "id": "entry-3",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T00:52:49Z",
+      "criterion_id": "ac2",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "go test ./internal/app/build ./internal/core/reconcile -run 'Phase|Evidence|Projection'",
+      "output": "ok  \tgithub.com/nilstate/scafld-go/internal/app/build\t0.489s\nok  \tgithub.com/nilstate/scafld-go/internal/core/reconcile\t0.369s\n"
+    },
+    {
+      "id": "entry-4",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T00:52:49Z",
+      "criterion_id": "ac3",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "go test ./... \u0026\u0026 make check",
+      "output": "?   \tgithub.com/nilstate/scafld-go/cmd/scafld\t[no test files]\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/bundle\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/cli\t0.405s\n?   \tgithub.com/nilstate/scafld-go/internal/adapters/clock\t[no test files]\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/config\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/filesystem\t(cached)\n?   \tgithub.com/nilstate/scafld-go/internal/adapters/git\t[no test files]\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/jsonstore\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/markdown\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/process\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/providers\t(cached)\n?   \tgithub.com/nilstate/scafld-go/internal/adapters/terminal\t[no test files]\n?   \tgithub.com/nilstate/scafld-go/internal/app/approve\t[no test files]\n?   \tgithub.com/nilstate/scafld-go/internal/app/audit\t[no test files]\nok  \tgithu"
+    },
+    {
+      "id": "entry-5",
+      "type": "phase",
+      "recorded_at": "2026-05-04T00:52:49Z",
+      "phase_id": "phase1",
+      "status": "completed",
+      "reason": "all phase criteria passed"
+    },
+    {
+      "id": "entry-6",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T00:53:31Z",
+      "criterion_id": "ac1",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "go test ./internal/adapters/markdown -run 'Golden|RoundTrip|Literate'",
+      "output": "ok  \tgithub.com/nilstate/scafld-go/internal/adapters/markdown\t(cached)\n"
+    },
+    {
+      "id": "entry-7",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T00:53:31Z",
+      "criterion_id": "ac2",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "go test ./internal/app/build ./internal/core/reconcile -run 'Phase|Evidence|Projection'",
+      "output": "ok  \tgithub.com/nilstate/scafld-go/internal/app/build\t0.161s\nok  \tgithub.com/nilstate/scafld-go/internal/core/reconcile\t(cached)\n"
+    },
+    {
+      "id": "entry-8",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T00:53:31Z",
+      "criterion_id": "ac3",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "go test ./... \u0026\u0026 make check",
+      "output": "?   \tgithub.com/nilstate/scafld-go/cmd/scafld\t[no test files]\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/bundle\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/cli\t0.439s\n?   \tgithub.com/nilstate/scafld-go/internal/adapters/clock\t[no test files]\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/config\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/filesystem\t(cached)\n?   \tgithub.com/nilstate/scafld-go/internal/adapters/git\t[no test files]\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/jsonstore\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/markdown\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/process\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/adapters/providers\t(cached)\n?   \tgithub.com/nilstate/scafld-go/internal/adapters/terminal\t[no test files]\n?   \tgithub.com/nilstate/scafld-go/internal/app/approve\t[no test files]\n?   \tgithub.com/nilstate/scafld-go/internal/app/audit\t[no test files]\nok  \tgithu"
+    },
+    {
+      "id": "entry-9",
+      "type": "phase",
+      "recorded_at": "2026-05-04T00:53:31Z",
+      "phase_id": "phase1",
+      "status": "completed",
+      "reason": "all phase criteria passed"
+    },
+    {
+      "id": "entry-10",
+      "type": "review",
+      "recorded_at": "2026-05-04T00:53:39Z",
+      "status": "pass",
+      "reason": "review gate passed"
+    },
+    {
+      "id": "entry-11",
+      "type": "complete",
+      "recorded_at": "2026-05-04T00:53:39Z",
+      "status": "completed",
+      "reason": "task completed"
+    },
+    {
+      "id": "entry-12",
+      "type": "review",
+      "recorded_at": "2026-05-04T00:54:47Z",
+      "status": "pass",
+      "reason": "review gate passed"
+    },
+    {
+      "id": "entry-13",
+      "type": "complete",
+      "recorded_at": "2026-05-04T00:54:47Z",
+      "status": "completed",
+      "reason": "task completed"
+    }
+  ],
+  "criterion_states": {
+    "ac1": {
+      "status": "pass",
+      "reason": "exit code was 0",
+      "updated_at": "2026-05-04T00:53:31Z",
+      "source_id": "entry-6"
+    },
+    "ac2": {
+      "status": "pass",
+      "reason": "exit code was 0",
+      "updated_at": "2026-05-04T00:53:31Z",
+      "source_id": "entry-7"
+    },
+    "ac3": {
+      "status": "pass",
+      "reason": "exit code was 0",
+      "updated_at": "2026-05-04T00:53:31Z",
+      "source_id": "entry-8"
+    }
+  },
+  "phase_blocks": {
+    "phase1": {
+      "status": "completed",
+      "reason": "all phase criteria passed",
+      "updated_at": "2026-05-04T00:53:31Z",
+      "source_id": "entry-9"
+    }
+  }
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/nilstate/scafld-go/internal/core/reconcile"
 	"github.com/nilstate/scafld-go/internal/core/session"
 	"github.com/nilstate/scafld-go/internal/core/spec"
 )
@@ -15,6 +16,7 @@ type SpecStore interface {
 
 type SessionStore interface {
 	Append(context.Context, string, session.Entry, string) (session.Session, error)
+	Load(context.Context, string) (session.Session, error)
 }
 
 type Clock interface{ Now() time.Time }
@@ -29,9 +31,20 @@ func Run(ctx context.Context, specs SpecStore, sessions SessionStore, clock Cloc
 	model.Updated = now
 	model.CurrentState.Next = "done"
 	model.CurrentState.AllowedFollowUp = "none"
+	ledger, err := sessions.Append(ctx, model.TaskID, session.Entry{Type: "complete", Status: "completed", Reason: "task completed"}, now)
+	if err != nil {
+		return spec.Model{}, err
+	}
+	if loaded, loadErr := sessions.Load(ctx, model.TaskID); loadErr == nil {
+		ledger = loaded
+	}
+	model = reconcile.FromSession(model, ledger)
+	model.Status = spec.StatusCompleted
+	model.Updated = now
+	model.CurrentState.Next = "done"
+	model.CurrentState.AllowedFollowUp = "none"
 	if err := specs.Save(ctx, path, model); err != nil {
 		return spec.Model{}, err
 	}
-	_, err = sessions.Append(ctx, model.TaskID, session.Entry{Type: "complete", Status: "completed", Reason: "task completed"}, now)
-	return model, err
+	return model, nil
 }

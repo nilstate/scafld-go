@@ -24,6 +24,56 @@ func TestGoldenRoundTripReleasedExamples(t *testing.T) {
 	}
 }
 
+func TestRoundTripPreservesLiterateSpecFields(t *testing.T) {
+	t.Parallel()
+
+	model := fixtureModel()
+	model.CurrentState = spec.CurrentState{
+		CurrentPhase:       "phase1",
+		Next:               "review",
+		Reason:             "runner update",
+		Blockers:           "none",
+		AllowedFollowUp:    "scafld review fixture-task",
+		LatestRunnerUpdate: "2026-05-04T00:00:00Z",
+		ReviewGate:         "not_started",
+	}
+	model.Objectives = []string{"Keep specs readable", "Keep execution evidence deterministic"}
+	model.Scope = []string{"Markdown parser", "Renderer"}
+	model.Dependencies = []string{"go toolchain"}
+	model.Assumptions = []string{"No legacy YAML task specs"}
+	model.Touchpoints = []string{"CLI", "agent workflow"}
+	model.Rollback = []string{"Revert the parser change"}
+	model.SelfEval = []string{"Round-trip checked"}
+	model.Deviations = []string{"none observed"}
+	model.Metadata = map[string]string{"owner": "runtime"}
+	model.Origin = spec.Origin{CreatedBy: "test", Source: "golden"}
+	model.Review = spec.ReviewState{Status: "pending", Verdict: "none"}
+	model.Phases[0].Dependencies = []string{"phase0"}
+	model.Phases[0].Acceptance[0].Status = "pass"
+	model.Phases[0].Acceptance[0].Evidence = "exit code was 0"
+	model.Phases[0].Acceptance[0].SourceEvent = "entry-1"
+
+	parsed, err := Parse(Render(model))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.CurrentState.AllowedFollowUp != model.CurrentState.AllowedFollowUp {
+		t.Fatalf("current state lost: %+v", parsed.CurrentState)
+	}
+	if len(parsed.Objectives) != 2 || parsed.Objectives[0] != "Keep specs readable" {
+		t.Fatalf("objectives lost: %+v", parsed.Objectives)
+	}
+	if got := parsed.Phases[0].Dependencies; len(got) != 1 || got[0] != "phase0" {
+		t.Fatalf("phase dependencies lost: %+v", got)
+	}
+	if parsed.Metadata["owner"] != "runtime" || parsed.Origin.CreatedBy != "test" {
+		t.Fatalf("metadata/origin lost: %+v %+v", parsed.Metadata, parsed.Origin)
+	}
+	if got := parsed.Phases[0].Acceptance[0]; got.Evidence != "exit code was 0" || got.SourceEvent != "entry-1" {
+		t.Fatalf("criterion evidence lost: %+v", got)
+	}
+}
+
 func TestRejectMalformedFrontMatterDuplicatePhaseUnclosedFenceAndMismatch(t *testing.T) {
 	t.Parallel()
 

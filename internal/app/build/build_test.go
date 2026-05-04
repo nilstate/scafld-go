@@ -59,4 +59,10 @@ func TestPhaseCriterionEvidence(t *testing.T) {
 	if out.Passed != 1 || specs.model.Status != spec.StatusReview {
 		t.Fatalf("output %+v model %+v", out, specs.model)
 	}
+	if specs.model.Phases[0].Status != "completed" {
+		t.Fatalf("phase status = %q, want completed", specs.model.Phases[0].Status)
+	}
+	if specs.model.CurrentState.AllowedFollowUp != "scafld review task" {
+		t.Fatalf("next action = %q", specs.model.CurrentState.AllowedFollowUp)
+	}
 }
