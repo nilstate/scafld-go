@@ -11,6 +11,7 @@ import (
 	"github.com/nilstate/scafld-go/internal/adapters/filesystem"
 	"github.com/nilstate/scafld-go/internal/adapters/markdown"
 	"github.com/nilstate/scafld-go/internal/adapters/process"
+	"github.com/nilstate/scafld-go/internal/adapters/providers"
 	"github.com/nilstate/scafld-go/internal/app/approve"
 	"github.com/nilstate/scafld-go/internal/app/bootstrap"
 	"github.com/nilstate/scafld-go/internal/app/build"
@@ -220,7 +221,7 @@ func runReview(ctx context.Context, args []string, stdout io.Writer, stderr io.W
 	if err != nil {
 		return failOut(stderr, err, code, opts.JSON)
 	}
-	out, err := review.Run(ctx, store, sessions, clock.System{}, opts.Positionals[0])
+	out, err := review.Run(ctx, store, sessions, providers.LocalProvider{}, clock.System{}, opts.Positionals[0])
 	if err != nil {
 		return failOut(stderr, err, ExitReview, opts.JSON)
 	}

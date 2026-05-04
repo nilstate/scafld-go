@@ -3,9 +3,12 @@ package providerfake
 import (
 	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nilstate/scafld-go/internal/core/review"
 )
 
 func TestProviderFakeModes(t *testing.T) {
@@ -55,4 +58,21 @@ func TestProviderFakeIdleTimeoutEndlessStreamInvalidPacketCrashMidStreamMutation
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	_ = Provider{Mode: ModeEndless}.Run(ctx, &bytes.Buffer{})
+}
+
+func TestProviderFakeInvokeParsesPacketsAndSurfacesInvalidOutput(t *testing.T) {
+	t.Parallel()
+
+	packet, err := Provider{Mode: ModeMutation}.Invoke(context.Background(), "task")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packet.Verdict != "fail" {
+		t.Fatalf("mutation packet verdict = %q", packet.Verdict)
+	}
+
+	_, err = Provider{Mode: ModeInvalidPacket}.Invoke(context.Background(), "task")
+	if !errors.Is(err, review.ErrInvalidPacket) {
+		t.Fatalf("invalid packet err = %v", err)
+	}
 }

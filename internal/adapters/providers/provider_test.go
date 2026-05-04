@@ -1,20 +1,17 @@
 package providers
 
 import (
-	"bytes"
 	"context"
-	"strings"
 	"testing"
 )
 
 func TestProviderContract(t *testing.T) {
 	t.Parallel()
-	var out bytes.Buffer
-	err := (LocalProvider{Messages: []string{"one", "two"}}).Invoke(context.Background(), &out)
+	packet, err := (LocalProvider{Messages: []string{`{"type":"finding","severity":"blocking","summary":"bug"}`}}).Invoke(context.Background(), "task")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "two") {
-		t.Fatalf("output %q", out.String())
+	if packet.Verdict != "fail" || len(packet.Findings) != 1 {
+		t.Fatalf("packet = %+v", packet)
 	}
 }

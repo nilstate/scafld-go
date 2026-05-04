@@ -2,21 +2,25 @@ package providers
 
 import (
 	"context"
-	"io"
+	"strings"
+
+	"github.com/nilstate/scafld-go/internal/core/review"
 )
 
 type LocalProvider struct {
 	Messages []string
 }
 
-func (p LocalProvider) Invoke(ctx context.Context, w io.Writer) error {
+func (p LocalProvider) Invoke(ctx context.Context, taskID string) (review.Packet, error) {
+	var lines []string
 	for _, msg := range p.Messages {
 		if err := ctx.Err(); err != nil {
-			return err
+			return review.Packet{}, err
 		}
-		if _, err := io.WriteString(w, msg+"\n"); err != nil {
-			return err
-		}
+		lines = append(lines, msg)
 	}
-	return nil
+	if len(lines) == 0 {
+		lines = []string{`{"type":"verdict","verdict":"pass"}`}
+	}
+	return review.ParseNDJSON(strings.Join(lines, "\n") + "\n")
 }

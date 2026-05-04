@@ -1,10 +1,13 @@
 package providerfake
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"time"
+
+	"github.com/nilstate/scafld-go/internal/core/review"
 )
 
 type Mode string
@@ -59,4 +62,20 @@ func (p Provider) Run(ctx context.Context, w io.Writer) error {
 	default:
 		return errors.New("unknown provider fake mode")
 	}
+}
+
+func (p Provider) Invoke(ctx context.Context, taskID string) (review.Packet, error) {
+	var out bytes.Buffer
+	err := p.Run(ctx, &out)
+	if out.Len() == 0 {
+		return review.Packet{}, err
+	}
+	packet, parseErr := review.ParseNDJSON(out.String())
+	if parseErr != nil {
+		return review.Packet{}, parseErr
+	}
+	if err != nil {
+		return review.Packet{}, err
+	}
+	return packet, nil
 }
