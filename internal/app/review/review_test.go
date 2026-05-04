@@ -120,12 +120,15 @@ func TestReviewPromptCarriesTaskContractToProvider(t *testing.T) {
 	t.Parallel()
 
 	provider := &promptProvider{packet: corereview.Packet{Verdict: corereview.VerdictPass}}
-	specs := &fakeSpecs{model: spec.Model{TaskID: "task", Title: "Task", Summary: "Review this", Objectives: []string{"Keep evidence"}, Acceptance: spec.Acceptance{Criteria: []spec.Criterion{{ID: "ac1", Command: "go test ./...", ExpectedKind: "exit_code_zero"}}}}}
+	specs := &fakeSpecs{model: spec.Model{TaskID: "task", Title: "Task", Summary: "Review this", Objectives: []string{"Keep evidence"}, Acceptance: spec.Acceptance{Criteria: []spec.Criterion{{ID: "ac1", Command: "go test ./...", ExpectedKind: "exit_code_zero", Status: "pass", Evidence: "exit code was 0"}}}}}
 	_, err := Run(context.Background(), specs, &fakeSessions{}, nil, provider, fakeClock{}, "task")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if provider.req.TaskID != "task" || !strings.Contains(provider.req.Prompt, "Review this") || !strings.Contains(provider.req.Prompt, "ac1") {
+		t.Fatalf("provider request = %+v", provider.req)
+	}
+	if !strings.Contains(provider.req.Prompt, "Evidence: exit code was 0") || !strings.Contains(provider.req.Prompt, "Do not run build, test, or mutation commands") {
 		t.Fatalf("provider request = %+v", provider.req)
 	}
 }

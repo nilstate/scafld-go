@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "task_id": "real-claude-review-smoke",
+  "created_at": "2026-05-04T02:33:55Z",
+  "updated_at": "2026-05-04T02:34:46Z",
+  "entries": [
+    {
+      "id": "entry-1",
+      "type": "approval",
+      "recorded_at": "2026-05-04T02:33:55Z",
+      "status": "approved",
+      "reason": "spec approved"
+    },
+    {
+      "id": "entry-2",
+      "type": "criterion",
+      "recorded_at": "2026-05-04T02:33:55Z",
+      "criterion_id": "ac1",
+      "phase_id": "phase1",
+      "status": "pass",
+      "reason": "exit code was 0",
+      "command": "go test ./internal/adapters/providers ./internal/app/review",
+      "output": "ok  \tgithub.com/nilstate/scafld-go/internal/adapters/providers\t(cached)\nok  \tgithub.com/nilstate/scafld-go/internal/app/review\t(cached)\n"
+    },
+    {
+      "id": "entry-3",
+      "type": "phase",
+      "recorded_at": "2026-05-04T02:33:55Z",
+      "phase_id": "phase1",
+      "status": "completed",
+      "reason": "all phase criteria passed"
+    },
+    {
+      "id": "entry-4",
+      "type": "review",
+      "recorded_at": "2026-05-04T02:34:38Z",
+      "status": "pass",
+      "reason": "review gate pass"
+    },
+    {
+      "id": "entry-5",
+      "type": "complete",
+      "recorded_at": "2026-05-04T02:34:46Z",
+      "status": "completed",
+      "reason": "task completed"
+    }
+  ],
+  "criterion_states": {
+    "ac1": {
+      "status": "pass",
+      "reason": "exit code was 0",
+      "updated_at": "2026-05-04T02:33:55Z",
+      "source_id": "entry-2"
+    }
+  },
+  "phase_blocks": {
+    "phase1": {
+      "status": "completed",
+      "reason": "all phase criteria passed",
+      "updated_at": "2026-05-04T02:33:55Z",
+      "source_id": "entry-3"
+    }
+  }
+}

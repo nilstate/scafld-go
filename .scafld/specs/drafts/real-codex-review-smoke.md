@@ -1,0 +1,110 @@
+---
+spec_version: '2.0'
+task_id: real-codex-review-smoke
+created: '2026-05-04T02:34:46Z'
+updated: '2026-05-04T02:39:40Z'
+status: completed
+harden_status: not_run
+size: medium
+risk_level: medium
+---
+
+# Smoke Codex review provider
+
+## Current State
+
+Status: completed
+Current phase: none
+Next: done
+Reason: task completed
+Blockers: none
+Allowed follow-up command: `none`
+Latest runner update: 2026-05-04T02:39:40Z
+Review gate: pass
+
+## Summary
+
+Verify scafld-go can run the real Codex provider path and parse the schema-constrained ReviewPacket.
+
+## Objectives
+
+- none
+
+## Scope
+
+- none
+
+## Dependencies
+
+- none
+
+## Assumptions
+
+- none
+
+## Touchpoints
+
+- none
+
+## Risks
+
+- none
+
+## Acceptance
+
+Profile: standard
+
+Validation:
+- none
+
+## Phase 1: Implementation
+
+Status: completed
+Dependencies: none
+
+Objective: Complete the requested change.
+
+Changes:
+- Implement the requested behavior.
+
+Acceptance:
+- [x] `ac1` command - Primary validation command
+  - Command: `go test ./internal/adapters/providers ./internal/app/review`
+  - Expected kind: `exit_code_zero`
+  - Status: pass
+  - Evidence: exit code was 0
+  - Source event: entry-2
+
+## Rollback
+
+- none
+
+## Review
+
+Status: completed
+Verdict: pass
+
+## Self Eval
+
+- none
+
+## Deviations
+
+- none
+
+## Metadata
+
+- created_by: scafld-go
+
+## Origin
+
+Created by: scafld-go
+Source: plan
+
+## Harden Rounds
+
+- none
+
+## Planning Log
+
+- none

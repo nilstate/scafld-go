@@ -248,7 +248,7 @@ func CodexArgs(binary string, root string, outputPath string, model string, sche
 }
 
 func ReviewPacketSchemaJSON() string {
-	return `{"type":"object","additionalProperties":false,"required":["verdict"],"properties":{"verdict":{"type":"string","enum":["pass","fail"]},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["severity","summary"],"properties":{"id":{"type":"string"},"severity":{"type":"string","enum":["blocking","non_blocking"]},"summary":{"type":"string"}}}}}}`
+	return `{"type":"object","additionalProperties":false,"required":["verdict","findings"],"properties":{"verdict":{"type":"string","enum":["pass","fail"]},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["id","severity","summary"],"properties":{"id":{"type":"string"},"severity":{"type":"string","enum":["blocking","non_blocking"]},"summary":{"type":"string"}}}}}}`
 }
 
 func packetFromProviderResult(result execution.Result, runErr error, text string) (review.Packet, error) {

@@ -150,7 +150,13 @@ func promptForModel(model spec.Model) string {
 	b.WriteString("## Acceptance Criteria\n\n")
 	for _, criterion := range model.AllCriteria() {
 		fmt.Fprintf(&b, "- %s (%s): %s\n", criterion.ID, criterion.ExpectedKind, criterion.Command)
+		if strings.TrimSpace(criterion.Status) != "" {
+			fmt.Fprintf(&b, "  - Status: %s\n", criterion.Status)
+		}
+		if strings.TrimSpace(criterion.Evidence) != "" {
+			fmt.Fprintf(&b, "  - Evidence: %s\n", criterion.Evidence)
+		}
 	}
-	b.WriteString("\nReturn NDJSON frames. Use `finding` frames with severity `blocking` or `non_blocking`, then a `verdict` frame with verdict `pass` or `fail`.\n")
+	b.WriteString("\nReview mode is read-only. Do not run build, test, or mutation commands; treat recorded acceptance evidence above as already executed. Return a ReviewPacket JSON object with `verdict` and `findings`. If your transport only supports line frames, emit `finding` frames with severity `blocking` or `non_blocking`, then a `verdict` frame with verdict `pass` or `fail`.\n")
 	return b.String()
 }
