@@ -2,6 +2,8 @@ package review
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/nilstate/scafld-go/internal/core/reconcile"
@@ -21,7 +23,7 @@ type SessionStore interface {
 }
 
 type Provider interface {
-	Invoke(context.Context, string) (review.Packet, error)
+	Invoke(context.Context, review.Request) (review.Packet, error)
 }
 
 type Clock interface{ Now() time.Time }
@@ -37,7 +39,7 @@ func Run(ctx context.Context, specs SpecStore, sessions SessionStore, provider P
 	if err != nil {
 		return Output{}, err
 	}
-	packet, err := provider.Invoke(ctx, taskID)
+	packet, err := provider.Invoke(ctx, review.Request{TaskID: model.TaskID, Prompt: promptForModel(model)})
 	if err != nil {
 		return Output{}, err
 	}
@@ -77,4 +79,26 @@ func nextForVerdict(taskID string, verdict string) (string, string) {
 		return "complete", "scafld complete " + taskID
 	}
 	return "repair", "scafld handoff " + taskID
+}
+
+func promptForModel(model spec.Model) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# Review %s\n\n", model.TaskID)
+	fmt.Fprintf(&b, "Title: %s\nStatus: %s\n\n", model.Title, model.Status)
+	if strings.TrimSpace(model.Summary) != "" {
+		fmt.Fprintf(&b, "## Summary\n\n%s\n\n", strings.TrimSpace(model.Summary))
+	}
+	if len(model.Objectives) > 0 {
+		b.WriteString("## Objectives\n\n")
+		for _, objective := range model.Objectives {
+			fmt.Fprintf(&b, "- %s\n", objective)
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("## Acceptance Criteria\n\n")
+	for _, criterion := range model.AllCriteria() {
+		fmt.Fprintf(&b, "- %s (%s): %s\n", criterion.ID, criterion.ExpectedKind, criterion.Command)
+	}
+	b.WriteString("\nReturn NDJSON frames. Use `finding` frames with severity `blocking` or `non_blocking`, then a `verdict` frame with verdict `pass` or `fail`.\n")
+	return b.String()
 }

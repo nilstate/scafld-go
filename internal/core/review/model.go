@@ -34,6 +34,11 @@ type Packet struct {
 	Raw      string    `json:"-"`
 }
 
+type Request struct {
+	TaskID string
+	Prompt string
+}
+
 func ParseNDJSON(text string) (Packet, error) {
 	var packet Packet
 	scanner := bufio.NewScanner(strings.NewReader(text))

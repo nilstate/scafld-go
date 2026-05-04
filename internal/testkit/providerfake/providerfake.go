@@ -64,7 +64,7 @@ func (p Provider) Run(ctx context.Context, w io.Writer) error {
 	}
 }
 
-func (p Provider) Invoke(ctx context.Context, taskID string) (review.Packet, error) {
+func (p Provider) Invoke(ctx context.Context, req review.Request) (review.Packet, error) {
 	var out bytes.Buffer
 	err := p.Run(ctx, &out)
 	if out.Len() == 0 {

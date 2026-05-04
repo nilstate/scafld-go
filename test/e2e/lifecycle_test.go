@@ -63,7 +63,7 @@ func TestReviewCommandProviderBlockingFindingExitsReviewFailure(t *testing.T) {
 		"--root",
 		root,
 		"--provider-command",
-		`printf '{"type":"finding","severity":"blocking","summary":"bug"}\n'`,
+		`grep 'provider-task' >/dev/null && printf '{"type":"finding","severity":"blocking","summary":"bug"}\n'`,
 		"provider-task",
 	)
 	var out bytes.Buffer

@@ -63,7 +63,7 @@ func TestProviderFakeIdleTimeoutEndlessStreamInvalidPacketCrashMidStreamMutation
 func TestProviderFakeInvokeParsesPacketsAndSurfacesInvalidOutput(t *testing.T) {
 	t.Parallel()
 
-	packet, err := Provider{Mode: ModeMutation}.Invoke(context.Background(), "task")
+	packet, err := Provider{Mode: ModeMutation}.Invoke(context.Background(), review.Request{TaskID: "task"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestProviderFakeInvokeParsesPacketsAndSurfacesInvalidOutput(t *testing.T) {
 		t.Fatalf("mutation packet verdict = %q", packet.Verdict)
 	}
 
-	_, err = Provider{Mode: ModeInvalidPacket}.Invoke(context.Background(), "task")
+	_, err = Provider{Mode: ModeInvalidPacket}.Invoke(context.Background(), review.Request{TaskID: "task"})
 	if !errors.Is(err, review.ErrInvalidPacket) {
 		t.Fatalf("invalid packet err = %v", err)
 	}

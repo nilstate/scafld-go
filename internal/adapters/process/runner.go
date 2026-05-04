@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -35,6 +36,9 @@ func (r Runner) Run(ctx context.Context, req execution.Request) (execution.Resul
 	cmd := exec.Command("sh", "-c", req.Command)
 	if req.CWD != "" {
 		cmd.Dir = req.CWD
+	}
+	if req.Input != "" {
+		cmd.Stdin = strings.NewReader(req.Input)
 	}
 	cmd.Env = append(os.Environ(), req.Env...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

@@ -4,6 +4,7 @@ import "time"
 
 type Request struct {
 	Command        string
+	Input          string
 	CWD            string
 	Env            []string
 	Timeout        time.Duration

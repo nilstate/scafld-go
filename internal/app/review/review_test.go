@@ -3,6 +3,7 @@ package review
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,8 +37,18 @@ func (f *fakeSessions) Load(context.Context, string) (session.Session, error) { 
 
 type fakeProvider struct{ packet corereview.Packet }
 
-func (f fakeProvider) Invoke(context.Context, string) (corereview.Packet, error) {
+func (f fakeProvider) Invoke(context.Context, corereview.Request) (corereview.Packet, error) {
 	return f.packet, nil
+}
+
+type promptProvider struct {
+	req    corereview.Request
+	packet corereview.Packet
+}
+
+func (p *promptProvider) Invoke(_ context.Context, req corereview.Request) (corereview.Packet, error) {
+	p.req = req
+	return p.packet, nil
 }
 
 type fakeClock struct{}
@@ -88,5 +99,19 @@ func TestReviewRejectsInvalidDirectProviderPacket(t *testing.T) {
 	_, err := Run(context.Background(), specs, &fakeSessions{}, fakeProvider{packet: corereview.Packet{Verdict: "maybe"}}, fakeClock{}, "task")
 	if !errors.Is(err, corereview.ErrInvalidPacket) {
 		t.Fatalf("invalid provider packet err = %v", err)
+	}
+}
+
+func TestReviewPromptCarriesTaskContractToProvider(t *testing.T) {
+	t.Parallel()
+
+	provider := &promptProvider{packet: corereview.Packet{Verdict: corereview.VerdictPass}}
+	specs := &fakeSpecs{model: spec.Model{TaskID: "task", Title: "Task", Summary: "Review this", Objectives: []string{"Keep evidence"}, Acceptance: spec.Acceptance{Criteria: []spec.Criterion{{ID: "ac1", Command: "go test ./...", ExpectedKind: "exit_code_zero"}}}}}
+	_, err := Run(context.Background(), specs, &fakeSessions{}, provider, fakeClock{}, "task")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if provider.req.TaskID != "task" || !strings.Contains(provider.req.Prompt, "Review this") || !strings.Contains(provider.req.Prompt, "ac1") {
+		t.Fatalf("provider request = %+v", provider.req)
 	}
 }

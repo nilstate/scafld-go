@@ -26,6 +26,13 @@ func TestCommandTimeoutDiagnosticCancel(t *testing.T) {
 	if result.Stdout != "out" || result.Stderr != "err" {
 		t.Fatalf("stdout/stderr not split: %+v", result)
 	}
+	result, err = (Runner{}).Run(context.Background(), execution.Request{Command: "cat", Input: "prompt", Timeout: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Stdout != "prompt" {
+		t.Fatalf("stdin not sent to process: %+v", result)
+	}
 	_, err = (Runner{}).Run(context.Background(), execution.Request{Command: "sleep 1", Timeout: time.Millisecond})
 	if !errors.Is(err, ErrTimeout) {
 		t.Fatalf("timeout error = %v", err)

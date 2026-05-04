@@ -21,7 +21,7 @@ type LocalProvider struct {
 	Messages []string
 }
 
-func (p LocalProvider) Invoke(ctx context.Context, taskID string) (review.Packet, error) {
+func (p LocalProvider) Invoke(ctx context.Context, req review.Request) (review.Packet, error) {
 	var lines []string
 	for _, msg := range p.Messages {
 		if err := ctx.Err(); err != nil {
@@ -44,7 +44,7 @@ type CommandProvider struct {
 	IdleTimeout time.Duration
 }
 
-func (p CommandProvider) Invoke(ctx context.Context, taskID string) (review.Packet, error) {
+func (p CommandProvider) Invoke(ctx context.Context, req review.Request) (review.Packet, error) {
 	if p.Runner == nil {
 		return review.Packet{}, fmt.Errorf("%w: runner is required", ErrProviderFailed)
 	}
@@ -52,9 +52,10 @@ func (p CommandProvider) Invoke(ctx context.Context, taskID string) (review.Pack
 		return review.Packet{}, fmt.Errorf("%w: command is required", ErrProviderFailed)
 	}
 	env := append([]string(nil), p.Env...)
-	env = append(env, "SCAFLD_TASK_ID="+taskID)
+	env = append(env, "SCAFLD_TASK_ID="+req.TaskID)
 	result, err := p.Runner.Run(ctx, execution.Request{
 		Command:     p.Command,
+		Input:       req.Prompt,
 		CWD:         p.CWD,
 		Env:         env,
 		Timeout:     p.Timeout,
