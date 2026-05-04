@@ -48,6 +48,38 @@ func TestFailCancel(t *testing.T) {
 	run(t, bin, "fail", "--root", root, "fail-task", "--reason", "test failure")
 }
 
+func TestReviewCommandProviderBlockingFindingExitsReviewFailure(t *testing.T) {
+	t.Parallel()
+
+	bin := testBinary(t)
+	root := t.TempDir()
+	run(t, bin, "init", "--root", root)
+	run(t, bin, "plan", "--root", root, "provider-task", "--command", "true")
+	run(t, bin, "approve", "--root", root, "provider-task")
+	run(t, bin, "build", "--root", root, "provider-task")
+	cmd := exec.Command(
+		bin,
+		"review",
+		"--root",
+		root,
+		"--provider-command",
+		`printf '{"type":"finding","severity":"blocking","summary":"bug"}\n'`,
+		"provider-task",
+	)
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	if err := cmd.Run(); err == nil {
+		t.Fatal("blocking finding should exit with review failure")
+	} else if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 4 {
+		t.Fatalf("review exit = %v\nstdout:\n%s\nstderr:\n%s", err, out.String(), errOut.String())
+	}
+	if !strings.Contains(out.String(), "review verdict: fail") {
+		t.Fatalf("stdout %q does not contain fail verdict", out.String())
+	}
+}
+
 func TestExitCodeTable(t *testing.T) {
 	t.Parallel()
 

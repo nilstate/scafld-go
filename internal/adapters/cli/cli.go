@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/nilstate/scafld-go/internal/adapters/clock"
 	"github.com/nilstate/scafld-go/internal/adapters/filesystem"
@@ -221,11 +222,40 @@ func runReview(ctx context.Context, args []string, stdout io.Writer, stderr io.W
 	if err != nil {
 		return failOut(stderr, err, code, opts.JSON)
 	}
-	out, err := review.Run(ctx, store, sessions, providers.LocalProvider{}, clock.System{}, opts.Positionals[0])
+	root, _ := commandRoot(ctx, opts, false)
+	provider, err := selectedReviewProvider(opts, root, opts.Positionals[0])
+	if err != nil {
+		return failOut(stderr, err, ExitInvalid, opts.JSON)
+	}
+	out, err := review.Run(ctx, store, sessions, provider, clock.System{}, opts.Positionals[0])
 	if err != nil {
 		return failOut(stderr, err, ExitReview, opts.JSON)
 	}
-	return okOut(stdout, "review", out, fmt.Sprintf("review verdict: %s\n", out.Verdict), opts.JSON)
+	exit := ExitSuccess
+	if out.Verdict != "pass" {
+		exit = ExitReview
+	}
+	return okOut(stdout, "review", out, fmt.Sprintf("review verdict: %s\n", out.Verdict), opts.JSON, exit)
+}
+
+func selectedReviewProvider(opts options, root string, taskID string) (review.Provider, error) {
+	if command := opts.Values["provider-command"]; command != "" {
+		return providers.CommandProvider{
+			Command:     command,
+			CWD:         root,
+			Runner:      process.Runner{DiagnosticsDir: root + "/.scafld/runs/" + taskID + "/diagnostics"},
+			Timeout:     30 * time.Minute,
+			IdleTimeout: 2 * time.Minute,
+		}, nil
+	}
+	switch provider := opts.Values["provider"]; provider {
+	case "", "local":
+		return providers.LocalProvider{}, nil
+	case "command":
+		return nil, errors.New("--provider=command requires --provider-command")
+	default:
+		return nil, fmt.Errorf("unknown review provider %q", provider)
+	}
 }
 
 func runComplete(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
