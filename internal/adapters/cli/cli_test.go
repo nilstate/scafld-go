@@ -100,3 +100,13 @@ func TestExitCodeTable(t *testing.T) {
 		}
 	}
 }
+
+func TestCancelledErrorsUseCancelledExitCode(t *testing.T) {
+	t.Parallel()
+
+	var stderr bytes.Buffer
+	code := failOut(&stderr, context.Canceled, ExitGeneric, false)
+	if code != ExitCancelled {
+		t.Fatalf("exit = %d, want %d", code, ExitCancelled)
+	}
+}

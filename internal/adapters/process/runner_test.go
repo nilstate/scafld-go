@@ -3,6 +3,8 @@ package process
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -50,9 +52,13 @@ func TestCommandTimeoutDiagnosticCancel(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err = (Runner{}).Run(ctx, execution.Request{Command: "sleep 1"})
+	path := filepath.Join(t.TempDir(), "should-not-exist")
+	_, err = (Runner{}).Run(ctx, execution.Request{Command: "touch " + path})
 	if err == nil {
 		t.Fatal("expected cancellation error")
+	}
+	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+		t.Fatalf("pre-cancelled command should not spawn, stat err = %v", statErr)
 	}
 }
 

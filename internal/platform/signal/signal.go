@@ -10,10 +10,19 @@ import (
 
 type Handler struct {
 	Interrupts atomic.Int32
+	escalated  atomic.Bool
 	stop       func()
 }
 
+type Options struct {
+	Escalate func()
+}
+
 func RootContext(parent context.Context) (context.Context, *Handler) {
+	return RootContextWithOptions(parent, Options{})
+}
+
+func RootContextWithOptions(parent context.Context, opts Options) (context.Context, *Handler) {
 	if parent == nil {
 		parent = context.Background()
 	}
@@ -29,11 +38,20 @@ func RootContext(parent context.Context) (context.Context, *Handler) {
 	}
 	go func() {
 		for range ch {
-			handler.Interrupts.Add(1)
-			cancel()
+			handler.record(cancel, opts)
 		}
 	}()
 	return ctx, handler
+}
+
+func (h *Handler) record(cancel context.CancelFunc, opts Options) {
+	if h.Interrupts.Add(1) > 1 {
+		h.escalated.Store(true)
+		if opts.Escalate != nil {
+			opts.Escalate()
+		}
+	}
+	cancel()
 }
 
 func (h *Handler) Stop() {
@@ -42,4 +60,8 @@ func (h *Handler) Stop() {
 	}
 	h.stop()
 	h.stop = nil
+}
+
+func (h *Handler) Escalated() bool {
+	return h != nil && h.escalated.Load()
 }

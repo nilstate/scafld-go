@@ -36,6 +36,9 @@ func (r Runner) Run(ctx context.Context, req execution.Request) (execution.Resul
 	if req.Command != "" && len(req.Args) > 0 {
 		return execution.Result{}, fmt.Errorf("command and args are mutually exclusive")
 	}
+	if err := ctx.Err(); err != nil {
+		return execution.Result{ExitCode: -1, KillReason: "cancelled"}, err
+	}
 	displayCommand := req.Command
 	var cmd *exec.Cmd
 	if len(req.Args) > 0 {

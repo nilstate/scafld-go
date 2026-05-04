@@ -131,6 +131,9 @@ func failOut(w io.Writer, err error, exit int, asJSON bool) int {
 	if err == nil {
 		err = errors.New("unknown error")
 	}
+	if errors.Is(err, context.Canceled) {
+		exit = ExitCancelled
+	}
 	if asJSON {
 		_ = json.NewEncoder(w).Encode(contracts.Envelope[map[string]any]{
 			OK: false,

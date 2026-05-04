@@ -3,11 +3,10 @@ package signal
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 func TestSignalContextCancel(t *testing.T) {
-	t.Parallel()
-
 	ctx, handler := RootContext(context.Background())
 	handler.Stop()
 	select {
@@ -18,11 +17,22 @@ func TestSignalContextCancel(t *testing.T) {
 }
 
 func TestSignalInterruptTerminateEscalateContract(t *testing.T) {
-	t.Parallel()
-	_, handler := RootContext(context.Background())
-	handler.Interrupts.Add(2)
-	if handler.Interrupts.Load() != 2 {
-		t.Fatal("interrupt count not recorded")
+	escalated := make(chan struct{}, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	handler := &Handler{}
+	handler.record(cancel, Options{Escalate: func() { escalated <- struct{}{} }})
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("first interrupt did not cancel context")
 	}
-	handler.Stop()
+	handler.record(cancel, Options{Escalate: func() { escalated <- struct{}{} }})
+	select {
+	case <-escalated:
+	case <-time.After(time.Second):
+		t.Fatal("second interrupt did not escalate")
+	}
+	if handler.Interrupts.Load() < 2 || !handler.Escalated() {
+		t.Fatalf("interrupts=%d escalated=%v", handler.Interrupts.Load(), handler.Escalated())
+	}
 }
