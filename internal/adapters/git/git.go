@@ -32,3 +32,11 @@ func (a Adapter) Status(ctx context.Context) (State, error) {
 	}
 	return State{Changed: changed}, nil
 }
+
+func (a Adapter) ChangedFiles(ctx context.Context) ([]string, error) {
+	state, err := a.Status(ctx)
+	if err != nil {
+		return nil, nil
+	}
+	return state.Changed, nil
+}

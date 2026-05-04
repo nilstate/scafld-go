@@ -26,6 +26,10 @@ type Provider interface {
 	Invoke(context.Context, review.Request) (review.Packet, error)
 }
 
+type WorkspaceStatus interface {
+	ChangedFiles(context.Context) ([]string, error)
+}
+
 type Clock interface{ Now() time.Time }
 
 type Output struct {
@@ -34,12 +38,31 @@ type Output struct {
 	Findings []review.Finding
 }
 
-func Run(ctx context.Context, specs SpecStore, sessions SessionStore, provider Provider, clock Clock, taskID string) (Output, error) {
+func Run(ctx context.Context, specs SpecStore, sessions SessionStore, workspace WorkspaceStatus, provider Provider, clock Clock, taskID string) (Output, error) {
 	model, path, err := specs.Load(ctx, taskID)
 	if err != nil {
 		return Output{}, err
 	}
+	before, err := workspaceSnapshot(ctx, workspace)
+	if err != nil {
+		return Output{}, err
+	}
 	packet, err := provider.Invoke(ctx, review.Request{TaskID: model.TaskID, Prompt: promptForModel(model)})
+	after, mutationErr := workspaceSnapshot(ctx, workspace)
+	if mutationErr != nil {
+		return Output{}, mutationErr
+	}
+	if mutated := workspaceMutations(before, after); len(mutated) > 0 {
+		packet = review.Packet{
+			Verdict: review.VerdictFail,
+			Findings: []review.Finding{{
+				ID:       "workspace_mutation",
+				Severity: review.SeverityBlocking,
+				Summary:  "provider mutated workspace during review: " + strings.Join(mutated, ", "),
+			}},
+		}
+		err = nil
+	}
 	if err != nil {
 		return Output{}, err
 	}
@@ -72,6 +95,31 @@ func Run(ctx context.Context, specs SpecStore, sessions SessionStore, provider P
 		return Output{}, err
 	}
 	return Output{TaskID: model.TaskID, Verdict: packet.Verdict, Findings: packet.Findings}, nil
+}
+
+func workspaceSnapshot(ctx context.Context, workspace WorkspaceStatus) ([]string, error) {
+	if workspace == nil {
+		return nil, nil
+	}
+	files, err := workspace.ChangedFiles(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return append([]string(nil), files...), nil
+}
+
+func workspaceMutations(before []string, after []string) []string {
+	seen := map[string]bool{}
+	for _, path := range before {
+		seen[path] = true
+	}
+	var mutated []string
+	for _, path := range after {
+		if !seen[path] {
+			mutated = append(mutated, path)
+		}
+	}
+	return mutated
 }
 
 func nextForVerdict(taskID string, verdict string) (string, string) {

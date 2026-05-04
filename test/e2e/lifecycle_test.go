@@ -80,6 +80,41 @@ func TestReviewCommandProviderBlockingFindingExitsReviewFailure(t *testing.T) {
 	}
 }
 
+func TestReviewProviderMutationGuardFailsReview(t *testing.T) {
+	t.Parallel()
+
+	bin := testBinary(t)
+	root := t.TempDir()
+	run(t, bin, "init", "--root", root)
+	if out, err := exec.Command("git", "init", root).CombinedOutput(); err != nil {
+		t.Skipf("git init unavailable: %v\n%s", err, out)
+	}
+	run(t, bin, "plan", "--root", root, "mutation-task", "--command", "true")
+	run(t, bin, "approve", "--root", root, "mutation-task")
+	run(t, bin, "build", "--root", root, "mutation-task")
+	cmd := exec.Command(
+		bin,
+		"review",
+		"--root",
+		root,
+		"--provider-command",
+		`touch MUTATED && printf '{"type":"verdict","verdict":"pass"}\n'`,
+		"mutation-task",
+	)
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	if err := cmd.Run(); err == nil {
+		t.Fatal("workspace mutation should exit with review failure")
+	} else if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 4 {
+		t.Fatalf("review exit = %v\nstdout:\n%s\nstderr:\n%s", err, out.String(), errOut.String())
+	}
+	if !strings.Contains(out.String(), "review verdict: fail") {
+		t.Fatalf("stdout %q does not contain mutation failure verdict", out.String())
+	}
+}
+
 func TestExitCodeTable(t *testing.T) {
 	t.Parallel()
 
